@@ -10,7 +10,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "types": "dist/index.d.ts",
   "devDependencies": {
     "typescript": "^5.6.3",
