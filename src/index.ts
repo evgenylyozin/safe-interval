@@ -21,7 +21,7 @@ export const CreateSafeInterval = (() => {
   const startNewSafeInterval = (
     callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: unknown[]
+    callableArgs: unknown[],
   ) => {
     (function loop() {
       const TimeoutID = setTimeout(async () => {
@@ -30,7 +30,6 @@ export const CreateSafeInterval = (() => {
         // and repeat
         loop();
       }, timeout);
-
       FunctionsToClear.set(callable, () => {
         clearTimeout(TimeoutID);
       });
@@ -64,11 +63,11 @@ export const CreateSafeInterval = (() => {
   const registerCallable = (
     callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: unknown[]
+    callableArgs: unknown[],
   ): void => {
     destroySafeInterval(callable);
     registerFunction(callable);
-    startNewSafeInterval(callable, timeout, ...callableArgs);
+    startNewSafeInterval(callable, timeout, callableArgs);
   };
 
   /**
@@ -81,7 +80,7 @@ export const CreateSafeInterval = (() => {
   return (
     callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: unknown[]
+    callableArgs: unknown[],
   ): (() => void) => {
     registerCallable(callable, timeout, callableArgs);
     // in any case return the destroy callback setter
@@ -95,45 +94,6 @@ export const CreateSafeInterval = (() => {
     };
   };
 })();
-
-// SOME TEST CASES:
-// const LogData = (data: string) => {
-//   console.log(data);
-// };
-// only one interval for the same callable
-// even with different inputs and timeout
-// CreateSafeInterval(LogData,0,"1")
-// CreateSafeInterval(LogData,100000,"2")
-// CreateSafeInterval(LogData,2,"3")
-// CreateSafeInterval(LogData,3,"4")
-// only this one runs after 5 seconds and over
-// CreateSafeInterval(LogData,5000,"5")
-
-// predictable interval clear
-// - stop the interval right away with no calls before the timeout expires
-// - or function fully executes and then for the next interval not called
-// logs nothing as was cleared before the timeout expired
-// const clear = CreateSafeInterval(LogData,5000,"1000000")
-// clear()
-// logs "1" once since cleared after the first expiration of the timeout
-// const clear2 = CreateSafeInterval(LogData,5000,"1")
-// setTimeout(()=>{clear2()},6000)
-
-// no asynchronous results mix or overlap
-// even if the interval timeout is shorter than the time to complete
-// the async operation
-// all operations are awaited in the order being requested
-// const ResolveRandomly = async () => {
-//     return new Promise((res)=>{
-//         const randMS = (Math.random()*10 + 2)*1000
-//         console.log(`RESOLVING IN ${randMS} MS`)
-//         setTimeout(()=>{
-//             console.log(`RESOLVED IN ${randMS} MS`)
-//             res(true)
-//         },randMS)
-//     })
-// }
-// CreateSafeInterval(ResolveRandomly,1000)
 
 export const CreateSafeTimeout = (() => {
   // to track all functions that are called in the safe timeout
