@@ -9,7 +9,7 @@
 export const CreateSafeInterval = (() => {
   // to track all functions that are called in the safe interval
   const FunctionsToClear: Map<
-    (...args: any[]) => void,
+    (...args: unknown[]) => void,
     (() => void) | undefined
   > = new Map();
   /**
@@ -19,9 +19,9 @@ export const CreateSafeInterval = (() => {
    * @param callableArgs Arguments for the function.
    */
   const startNewSafeInterval = (
-    callable: (...args: any[]) => void,
+    callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: any[]
+    ...callableArgs: unknown[]
   ) => {
     (function loop() {
       const TimeoutID = setTimeout(async () => {
@@ -40,11 +40,11 @@ export const CreateSafeInterval = (() => {
    * Register a function and its corresponding clear function (the clear function here is set to undefined, the actual destroy or register callbacks are set elsewhere).
    * @param callable Function to be called at each interval.
    */
-  const registerFunction = (callable: (...args: any[]) => void) => {
+  const registerFunction = (callable: (...args: unknown[]) => void) => {
     FunctionsToClear.set(callable, undefined);
   };
 
-  const destroySafeInterval = (callable: (...args: any[]) => void) => {
+  const destroySafeInterval = (callable: (...args: unknown[]) => void) => {
     if (FunctionsToClear.has(callable)) {
       const Clear = FunctionsToClear.get(callable);
       if (Clear) {
@@ -62,9 +62,9 @@ export const CreateSafeInterval = (() => {
    * @returns A function that, when called, registers and initiates the interval.
    */
   const registerCallable = (
-    callable: (...args: any[]) => void,
+    callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: any[]
+    ...callableArgs: unknown[]
   ): void => {
     destroySafeInterval(callable);
     registerFunction(callable);
@@ -79,9 +79,9 @@ export const CreateSafeInterval = (() => {
    * @returns A function that, when called, stops the interval from executing further.
    */
   return (
-    callable: (...args: any[]) => void,
+    callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: any[]
+    ...callableArgs: unknown[]
   ): (() => void) => {
     registerCallable(callable, timeout, callableArgs);
     // in any case return the destroy callback setter
@@ -98,8 +98,8 @@ export const CreateSafeInterval = (() => {
 
 // SOME TEST CASES:
 // const LogData = (data: string) => {
-//     console.log(data)
-// }
+//   console.log(data);
+// };
 // only one interval for the same callable
 // even with different inputs and timeout
 // CreateSafeInterval(LogData,0,"1")
@@ -138,7 +138,7 @@ export const CreateSafeInterval = (() => {
 export const CreateSafeTimeout = (() => {
   // to track all functions that are called in the safe timeout
   const FunctionsToClear: Map<
-    (...args: any[]) => void,
+    (...args: unknown[]) => void,
     (() => void) | undefined
   > = new Map();
   /**
@@ -148,9 +148,9 @@ export const CreateSafeTimeout = (() => {
    * @param callableArgs Arguments for the function.
    */
   const startNewSafeTimeout = (
-    callable: (...args: any[]) => void,
+    callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: any[]
+    ...callableArgs: unknown[]
   ) => {
     setTimeout(async () => {
       const Clear = FunctionsToClear.get(callable);
@@ -178,7 +178,7 @@ export const CreateSafeTimeout = (() => {
    * Register a function and its corresponding "Register callback" function (the function here is set to undefined, the actual register callback is set elsewhere).
    * @param callable Function to be called at the timeout expiration.
    */
-  const registerFunction = (callable: (...args: any[]) => void) => {
+  const registerFunction = (callable: (...args: unknown[]) => void) => {
     FunctionsToClear.set(callable, undefined);
   };
 
@@ -191,9 +191,9 @@ export const CreateSafeTimeout = (() => {
    * @returns A function that, when called, registers and initiates the timeout.
    */
   const createRegisterCallback = (
-    callable: (...args: any[]) => void,
+    callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: any[]
+    ...callableArgs: unknown[]
   ): (() => void) => {
     return () => {
       registerFunction(callable);
@@ -207,14 +207,14 @@ export const CreateSafeTimeout = (() => {
    * @param callableArgs Arguments for the function.
    */
   return (
-    callable: (...args: any[]) => void,
+    callable: (...args: unknown[]) => void,
     timeout: number | undefined,
-    ...callableArgs: any[]
+    ...callableArgs: unknown[]
   ): (() => void) => {
     const registerCallback = createRegisterCallback(
       callable,
       timeout,
-      callableArgs
+      callableArgs,
     );
     if (FunctionsToClear.has(callable)) {
       // if the callable has already been registered
