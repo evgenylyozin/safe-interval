@@ -10,7 +10,8 @@
     "lint": "eslint ./src",
     "prettify": "prettier . --write",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "stage-updated": "git add -u"
   },
   "keywords": [],
   "author": "",
