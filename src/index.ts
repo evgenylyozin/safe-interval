@@ -243,3 +243,22 @@ export const CreateSafeTimeout = (() => {
     };
   };
 })();
+
+/**
+ * This is just a wrapper for setTimeout, returning a function that clears the timeout
+ * Just for convenience
+ * The default setTimeout can be used instead
+ * Use this function if there is a need to setup multiple timeouts for the same callable.
+ * For example, if there is a need to fetch multiple different resources once per timeout, or the same resource but with different timeouts.
+ * Every call to the function creates a new timeout
+ */
+export const CreateSafeTimeoutMultiple = (
+  callable: Callable,
+  timeout: number | undefined,
+  callableArgs: unknown[],
+) => {
+  const Timeout = setTimeout(callable, timeout, ...callableArgs);
+  return () => {
+    clearTimeout(Timeout);
+  };
+};

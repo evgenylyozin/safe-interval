@@ -3,6 +3,7 @@ import {
   CreateSafeInterval,
   CreateSafeIntervalMultiple,
   CreateSafeTimeout,
+  CreateSafeTimeoutMultiple,
 } from "../src/index.js";
 
 const DataIdentity = (data: string) => {
@@ -495,5 +496,152 @@ describe("testing CreateSafeIntervalMultiple with asynchronous function with sin
       actualRandomMSArray.length = 0;
       expectedRandomMSArray.length = 0;
     }
+  });
+});
+
+// createSafeTimeoutMultiple
+
+describe("testing CreateSafeTimeoutMultiple with synchronous function with single argument", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("many timeouts for the same callable", async () => {
+    // the callable should be called once for each timeout with the expected data
+    // even with the same inputs and timeout
+    const c1 = CreateSafeTimeoutMultiple(DataIdentityMock, 1000, ["1"]);
+    const c2 = CreateSafeTimeoutMultiple(DataIdentityMock, 1000, ["1"]);
+    const c3 = CreateSafeTimeoutMultiple(DataIdentityMock, 3000, ["3"]);
+    const c4 = CreateSafeTimeoutMultiple(DataIdentityMock, 4000, ["4"]);
+    const c5 = CreateSafeTimeoutMultiple(DataIdentityMock, 5000, ["5"]);
+    await vi.advanceTimersByTimeAsync(5000);
+    c1();
+    c2();
+    c3();
+    c4();
+    c5();
+    expect(DataIdentityMock).toBeCalledTimes(5);
+    const resultsArray = DataIdentityMock.mock.results.map((r) => r.value);
+    expect(resultsArray).toEqual(["1", "1", "3", "4", "5"]);
+  });
+  it("timeouts stop and no callable is executed if the clear function is called before the timeout", async () => {
+    const c1 = CreateSafeTimeoutMultiple(DataIdentityMock, 0, ["1"]);
+    const c2 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
+    const c3 = CreateSafeTimeoutMultiple(DataIdentityMock, 2, ["3"]);
+    const c4 = CreateSafeTimeoutMultiple(DataIdentityMock, 3, ["4"]);
+    const c5 = CreateSafeTimeoutMultiple(DataIdentityMock, 4, ["5"]);
+    c1();
+    c2();
+    c3();
+    c4();
+    c5();
+    await vi.advanceTimersByTimeAsync(50000);
+    expect(DataIdentityMock).toBeCalledTimes(0);
+  });
+  it("the callable is executed fully if the clear function is called after the timeout and the timeout stops", async () => {
+    const c1 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
+    const c2 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
+    const c3 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["3"]);
+    const c4 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["4"]);
+    const c5 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["5"]);
+    await vi.advanceTimersByTimeAsync(1);
+    c1();
+    c2();
+    c3();
+    c4();
+    c5();
+    await vi.advanceTimersByTimeAsync(50000);
+    expect(DataIdentityMock).toBeCalledTimes(5);
+    const resultsArray = DataIdentityMock.mock.results.map((r) => r.value);
+    expect(resultsArray).toEqual(["1", "1", "3", "4", "5"]);
+  });
+  it("the callable is executed fully if the clear function is not called at all and the timeout stops", async () => {
+    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
+    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
+    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["3"]);
+    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["4"]);
+    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["5"]);
+    await vi.advanceTimersByTimeAsync(50000);
+    expect(DataIdentityMock).toBeCalledTimes(5);
+    const resultsArray = DataIdentityMock.mock.results.map((r) => r.value);
+    expect(resultsArray).toEqual(["1", "1", "3", "4", "5"]);
+  });
+});
+
+describe("testing CreateSafeTimeoutMultiple with asynchronous function with single argument", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("many timeouts for the same callable", async () => {
+    // the callable should be called inside any created interval with the expected data
+    // even with the same inputs and timeout
+    const c1 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1000, ["1"]);
+    const c2 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1000, ["1"]);
+    const c3 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 3000, ["3"]);
+    const c4 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 4000, ["4"]);
+    const c5 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 5000, ["5"]);
+    await PassTickAndWaitForResolve(5000);
+    c1();
+    c2();
+    c3();
+    c4();
+    c5();
+    expect(AsyncDataIdentityMock).toBeCalledTimes(5);
+    const resultsArray = AsyncDataIdentityMock.mock.settledResults.map(
+      (r) => r.value,
+    );
+    expect(resultsArray).toEqual(["1", "1", "3", "4", "5"]);
+  });
+  it("timeouts stop and no callable is executed if the clear function is called before the timeout", async () => {
+    const c1 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 0, ["1"]);
+    const c2 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
+    const c3 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 2, ["3"]);
+    const c4 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 3, ["4"]);
+    const c5 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 4, ["5"]);
+    c1();
+    c2();
+    c3();
+    c4();
+    c5();
+    await vi.advanceTimersByTimeAsync(50000);
+    expect(AsyncDataIdentityMock).toBeCalledTimes(0);
+  });
+  it("the callable is executed fully if the clear function is called after the timeout and the timeout stops", async () => {
+    const c1 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
+    const c2 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
+    const c3 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["3"]);
+    const c4 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["4"]);
+    const c5 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["5"]);
+    await PassTickAndWaitForResolve(1);
+    c1();
+    c2();
+    c3();
+    c4();
+    c5();
+    await vi.advanceTimersByTimeAsync(50000);
+    expect(AsyncDataIdentityMock).toBeCalledTimes(5);
+    const resultsArray = AsyncDataIdentityMock.mock.settledResults.map(
+      (r) => r.value,
+    );
+    expect(resultsArray).toEqual(["1", "1", "3", "4", "5"]);
+  });
+
+  it("the callable is executed fully if the clear function is not called at all and the timeout stops", async () => {
+    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
+    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
+    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["3"]);
+    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["4"]);
+    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["5"]);
+    await vi.advanceTimersByTimeAsync(50000);
+    expect(AsyncDataIdentityMock).toBeCalledTimes(5);
+    const resultsArray = AsyncDataIdentityMock.mock.settledResults.map(
+      (r) => r.value,
+    );
+    expect(resultsArray).toEqual(["1", "1", "3", "4", "5"]);
   });
 });
