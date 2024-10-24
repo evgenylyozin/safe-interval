@@ -1,3 +1,28 @@
+type Callable = (...args: unknown[]) => void;
+type Clear = () => void;
+type FunctionsToClear = Map<Callable, Clear>;
+type FunctionsToQueue = Map<Callable, (() => Promise<void>)[]>;
+type FunctionsToLoop = Map<Callable, boolean>;
+
+const destroy = (callable: Callable, ftc: FunctionsToClear) => {
+  if (ftc.has(callable)) {
+    const Clear = ftc.get(callable);
+    if (Clear) {
+      Clear();
+    }
+    ftc.delete(callable);
+  }
+};
+
+const register = (callable: Callable, ftc: FunctionsToClear) => {
+  ftc.set(callable, undefined);
+};
+const setQueue = (callable: Callable, ftq: FunctionsToQueue) => {
+  if (!ftq.has(callable)) ftq.set(callable, []);
+};
+const setLoop = (callable: Callable, ftl: FunctionsToLoop) => {
+  if (!ftl.has(callable)) ftl.set(callable, false);
+};
 /**
  * Function to manage the execution of a given function at specified intervals, ensuring each invocation completes before the next one starts.
  * @returns A function that, when called, stops the interval from executing further.
@@ -8,18 +33,17 @@
  */
 export const CreateSafeInterval = (() => {
   // to track all functions that are called in the safe interval
-  const FunctionsToClear: Map<
-    (...args: unknown[]) => void,
-    (() => void) | undefined
-  > = new Map();
+  const FunctionsToClear: FunctionsToClear = new Map();
   /**
    * Start a new safe interval for the provided function.
+   * Intentionally not extracting this one to something more general between all functions
+   * In favor of readability and maintainability
    * @param callable Function to be called at each interval.
    * @param timeout Interval in milliseconds.
    * @param callableArgs Arguments for the function.
    */
   const startNewSafeInterval = (
-    callable: (...args: unknown[]) => void,
+    callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
   ) => {
@@ -37,23 +61,7 @@ export const CreateSafeInterval = (() => {
       });
     })();
   };
-  /**
-   * Register a function and its corresponding clear function (the clear function here is set to undefined, the actual destroy or register callbacks are set elsewhere).
-   * @param callable Function to be called at each interval.
-   */
-  const registerFunction = (callable: (...args: unknown[]) => void) => {
-    FunctionsToClear.set(callable, undefined);
-  };
 
-  const destroySafeInterval = (callable: (...args: unknown[]) => void) => {
-    if (FunctionsToClear.has(callable)) {
-      const Clear = FunctionsToClear.get(callable);
-      if (Clear) {
-        Clear();
-      }
-      FunctionsToClear.delete(callable);
-    }
-  };
   /**
    * Creates a register callback that sets up a safe interval for the given callable function.
    * The callback, when invoked, registers the function and starts a new interval for it.
@@ -63,12 +71,12 @@ export const CreateSafeInterval = (() => {
    * @returns A function that, when called, registers and initiates the interval.
    */
   const registerCallable = (
-    callable: (...args: unknown[]) => void,
+    callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
   ): void => {
-    destroySafeInterval(callable);
-    registerFunction(callable);
+    destroy(callable, FunctionsToClear);
+    register(callable, FunctionsToClear);
     startNewSafeInterval(callable, timeout, callableArgs);
   };
 
@@ -80,7 +88,7 @@ export const CreateSafeInterval = (() => {
    * @returns A function that, when called, stops the interval from executing further.
    */
   return (
-    callable: (...args: unknown[]) => void,
+    callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
   ): (() => void) => {
@@ -92,7 +100,7 @@ export const CreateSafeInterval = (() => {
     // on the currently active interval
     // and completely stop the interval and remove the callable from the map
     return () => {
-      destroySafeInterval(callable);
+      destroy(callable, FunctionsToClear);
     };
   };
 })();
@@ -108,12 +116,12 @@ export const CreateSafeInterval = (() => {
  * - creates interval for the same callable each time allowing for not related intervals calling the same callable (no matter the arguments, timeout)
  */
 export const CreateSafeIntervalMultiple = (
-  callable: (...args: unknown[]) => void,
+  callable: Callable,
   timeout: number | undefined,
   callableArgs: unknown[],
 ) => {
   // to track single function that is called in the safe interval
-  let Clear: (() => void) | undefined = undefined;
+  let Clear: Clear = undefined;
   /**
    * Start a new safe interval for the provided function.
    * @param callable Function to be called at each interval.
@@ -121,7 +129,7 @@ export const CreateSafeIntervalMultiple = (
    * @param callableArgs Arguments for the function.
    */
   const startNewSafeInterval = (
-    callable: (...args: unknown[]) => void,
+    callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
   ) => {
@@ -145,18 +153,12 @@ export const CreateSafeIntervalMultiple = (
 
 export const CreateSafeTimeout = (() => {
   // to track all functions that are called in the safe timeout
-  const FunctionsToClear: Map<
-    (...args: unknown[]) => void,
-    (() => void) | undefined
-  > = new Map();
-
+  const FunctionsToClear: FunctionsToClear = new Map();
   // resolve queue
-  const FunctionsToQueue: Map<
-    (...args: unknown[]) => void,
-    (() => Promise<void>)[]
-  > = new Map();
-  // loop track
-  const FunctionsToLoop: Map<(...args: unknown[]) => void, boolean> = new Map();
+  const FunctionsToQueue: FunctionsToQueue = new Map();
+  // track loop status
+  const FunctionsToLoop: FunctionsToLoop = new Map();
+
   /**
    * Start a new safe timeout for the provided function.
    * @param callable Function to be called at the timeout.
@@ -164,18 +166,18 @@ export const CreateSafeTimeout = (() => {
    * @param callableArgs Arguments for the function.
    */
   const startNewSafeTimeout = (
-    callable: (...args: unknown[]) => void,
+    callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
   ) => {
-    const TimeoutID = setTimeout(async () => {
+    const TimeoutID = setTimeout(() => {
       // push the function into the queue
       // if the callable is scheduler by the timeout (not cancelled)
       if (FunctionsToQueue.has(callable)) {
         FunctionsToQueue.get(callable).push(async () => {
           await callable(...callableArgs);
         });
-        startNewTimeoutLoopIfNeeded(callable);
+        startResolveLoopIfNeeded(callable);
       }
     }, timeout);
     FunctionsToClear.set(callable, () => {
@@ -183,33 +185,12 @@ export const CreateSafeTimeout = (() => {
     });
   };
 
-  /**
-   * Register a function and its corresponding "Register callback" function (the function here is set to undefined, the actual register callback is set elsewhere).
-   * @param callable Function to be called at the timeout expiration.
-   */
-  const registerFunction = (callable: (...args: unknown[]) => void) => {
-    FunctionsToClear.set(callable, undefined);
-    if (!FunctionsToQueue.has(callable)) FunctionsToQueue.set(callable, []);
-    if (!FunctionsToLoop.has(callable)) FunctionsToLoop.set(callable, false);
-  };
-
-  const destroySafeInterval = (callable: (...args: unknown[]) => void) => {
-    if (FunctionsToClear.has(callable)) {
-      const Clear = FunctionsToClear.get(callable);
-      if (Clear) {
-        Clear();
-      }
-      FunctionsToClear.delete(callable);
-    }
-  };
-  const startNewTimeoutLoopIfNeeded = (
-    callable: (...args: unknown[]) => void,
-  ) => {
-    if (!FunctionsToLoop.get(callable)) {
+  const startResolveLoopIfNeeded = (callable: Callable) => {
+    if (FunctionsToLoop.has(callable) && !FunctionsToLoop.get(callable)) {
       FunctionsToLoop.set(callable, true);
       (async function loop() {
         const queue = FunctionsToQueue.get(callable);
-        if (queue.length > 0) {
+        if (queue && queue.length > 0) {
           const callable = queue.shift();
           if (callable) {
             await callable();
@@ -230,16 +211,18 @@ export const CreateSafeTimeout = (() => {
    * @returns A function that, when called, registers and initiates the interval.
    */
   const registerCallable = (
-    callable: (...args: unknown[]) => void,
+    callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
   ): void => {
-    destroySafeInterval(callable);
-    registerFunction(callable);
+    destroy(callable, FunctionsToClear);
+    register(callable, FunctionsToClear);
+    setQueue(callable, FunctionsToQueue);
+    setLoop(callable, FunctionsToLoop);
     startNewSafeTimeout(callable, timeout, callableArgs);
   };
   return (
-    callable: (...args: unknown[]) => void,
+    callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
   ): (() => void) => {
@@ -251,7 +234,7 @@ export const CreateSafeTimeout = (() => {
     // on the currently active interval
     // and completely stop the interval and remove the callable from the map
     return () => {
-      destroySafeInterval(callable);
+      destroy(callable, FunctionsToClear);
     };
   };
 })();
