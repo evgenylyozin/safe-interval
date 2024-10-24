@@ -137,8 +137,10 @@ export const CreateSafeIntervalMultiple = (
       const TimeoutID = setTimeout(async () => {
         // wait till the function is fully executed
         await callable(...callableArgs);
-        // and repeat
-        loop();
+        // and repeat if not cleared
+        if (Clear) {
+          loop();
+        }
       }, timeout);
       Clear = () => {
         clearTimeout(TimeoutID);
@@ -148,7 +150,10 @@ export const CreateSafeIntervalMultiple = (
 
   startNewSafeInterval(callable, timeout, callableArgs);
 
-  return Clear;
+  return () => {
+    Clear();
+    Clear = undefined;
+  };
 };
 
 export const CreateSafeTimeout = (() => {
