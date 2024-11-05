@@ -1,9 +1,6 @@
 # Scheduled todos
 
 - plus tests:
-  -- add the same function with intervals greater than single interval for safe interval
-  -- add the same function for safe timeout after the timeout passed
-  -- add tests for functions with many heterogeneous arguments
   -- test interval and timeout with different functions (should result in different timeouts and intervals)
   -- test map fill for interval and timeout:
   --- when the same function is added multiple times in a row
