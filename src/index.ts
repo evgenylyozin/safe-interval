@@ -1,5 +1,5 @@
 type Callable = (...args: unknown[]) => void;
-type Clear = () => void;
+type Clear = (() => void) | undefined;
 type FunctionsToClear = Map<Callable, Clear>;
 type FunctionsToQueue = Map<Callable, (() => Promise<void>)[]>;
 type FunctionsToLoop = Map<Callable, boolean>;
@@ -147,7 +147,7 @@ export const CreateSafeIntervalMultiple = (
   startNewSafeInterval(callable, timeout, callableArgs);
 
   return () => {
-    Clear();
+    if (Clear) Clear();
     Clear = undefined;
   };
 };
@@ -175,7 +175,7 @@ export const CreateSafeTimeout = (() => {
       // push the function into the queue
       // if the callable is scheduler by the timeout (not cancelled)
       if (FunctionsToQueue.has(callable)) {
-        FunctionsToQueue.get(callable).push(async () => {
+        FunctionsToQueue.get(callable)!.push(async () => {
           await callable(...callableArgs);
         });
         startResolveLoopIfNeeded(callable);
