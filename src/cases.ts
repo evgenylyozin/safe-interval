@@ -164,14 +164,14 @@ const WaitTillLastResolvedAndPrintQueues = () => {
   const LastResolveTime = resolveQueue[resolveQueue.length - 1];
   setTimeout(PrintQueues, LastResolveTime);
 };
-const RandomAsyncLog = async () =>
+const RandomAsyncLog = async (waitFor?: number) =>
   new Promise((r) => {
-    const randMS = Math.random() * 3000;
-    registerQueue.push(randMS);
+    const wait = waitFor ? waitFor : Math.random() * 3000;
+    registerQueue.push(wait);
     setTimeout(() => {
-      resolveQueue.push(randMS);
-      r(randMS);
-    }, randMS);
+      resolveQueue.push(wait);
+      r(wait);
+    }, wait);
   });
 
 // Create safe interval case:
@@ -189,11 +189,26 @@ setTimeout(() => {
 }, 5000);
 
 // Create safe timeout case:
+CreateSafeTimeout(RandomAsyncLog, 1000, [5000]); // register 1000ms timeout with async function resolving after 5000ms
+setTimeout(() => {
+  CreateSafeTimeout(RandomAsyncLog, 0, [1]);
+}, 1500); // after 1500ms register new 0ms timeout with async function resolving after 1ms (when the previous function is already on the stack)
+setTimeout(() => {
+  WaitTillLastResolvedAndPrintQueues();
+}, 7500); // wait all functions to resolve
+
+// standard setTimeout behavior, the results will interleave:
+setTimeout(RandomAsyncLog, 1000, 5000);
+setTimeout(() => {
+  setTimeout(RandomAsyncLog, 0, 1);
+}, 1500);
+setTimeout(() => {
+  WaitTillLastResolvedAndPrintQueues();
+}, 7500);
 
 // CreateSafeIntervalMultiple case:
 // the only noticeable difference between the CreateSafeIntervalMultiple and default setInterval is when working with async functions
 // randomly resolving function results will always be in the order the function was called
-
 const c3 = CreateSafeIntervalMultiple(RandomAsyncLog, 1000, []);
 setTimeout(() => c3(), 5000);
 
