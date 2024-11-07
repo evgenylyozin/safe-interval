@@ -1,12 +1,5 @@
 # Scheduled todos
 
-- plus tests:
-  -- test interval and timeout with different functions (should result in different timeouts and intervals)
-  -- test map fill for interval and timeout:
-  --- when the same function is added multiple times in a row
-  --- when the same function is added multiple times with timeouts
-  --- when different functions are added
-
 - create real cases to test the package:
   -- single interval for registering single function many times in a row
   -- single interval for registering single function many times with intervals

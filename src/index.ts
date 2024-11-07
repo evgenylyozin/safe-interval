@@ -14,9 +14,6 @@ const destroy = (callable: Callable, ftc: FunctionsToClear) => {
   }
 };
 
-const register = (callable: Callable, ftc: FunctionsToClear) => {
-  ftc.set(callable, undefined);
-};
 const setQueue = (callable: Callable, ftq: FunctionsToQueue) => {
   if (!ftq.has(callable)) ftq.set(callable, []);
 };
@@ -76,7 +73,6 @@ export const CreateSafeInterval = (() => {
     callableArgs: unknown[],
   ): void => {
     destroy(callable, FunctionsToClear);
-    register(callable, FunctionsToClear);
     startNewSafeInterval(callable, timeout, callableArgs);
   };
 
@@ -202,7 +198,10 @@ export const CreateSafeTimeout = (() => {
             loop();
           }
         } else {
-          FunctionsToLoop.set(callable, false);
+          // here we know that the queue is empty
+          // so we could destroy the key in FunctionsToLoop and FunctionsToQueue
+          FunctionsToLoop.delete(callable);
+          FunctionsToQueue.delete(callable);
         }
       })();
     }
@@ -221,7 +220,6 @@ export const CreateSafeTimeout = (() => {
     callableArgs: unknown[],
   ): void => {
     destroy(callable, FunctionsToClear);
-    register(callable, FunctionsToClear);
     setQueue(callable, FunctionsToQueue);
     setLoop(callable, FunctionsToLoop);
     startNewSafeTimeout(callable, timeout, callableArgs);

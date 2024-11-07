@@ -780,3 +780,107 @@ describe("testing CreateSafeTimeout with synchronous function with single argume
 });
 
 // different functions should result in different timeouts and intervals for safe interval and safe timeout
+
+const DataIdentity2 = (
+  a1?: unknown,
+  a2?: unknown,
+  a3?: unknown,
+  a4?: unknown,
+  a5?: unknown,
+) => {
+  return a3 ? a3 : a1 ? a1 : a2 ? a2 : a4 ? a4 : a5;
+};
+
+const DataIdentity2Mock = vi.fn(DataIdentity2);
+
+describe("testing CreateSafeInterval with different functions with single argument", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  for (const args of Arguments) {
+    it("two different intervals for different callables", async () => {
+      CreateSafeInterval(DataIdentityMock, 0, ["1"]);
+      CreateSafeInterval(DataIdentityMock, 100000, ["2"]);
+      CreateSafeInterval(DataIdentityMock, 0, ["3"]);
+      CreateSafeInterval(DataIdentityMock, 3, ["4"]);
+      const clear = CreateSafeInterval(DataIdentityMock, 2000, args);
+
+      CreateSafeInterval(DataIdentity2Mock, 0, ["1"]);
+      CreateSafeInterval(DataIdentity2Mock, 100000, ["2"]);
+      CreateSafeInterval(DataIdentity2Mock, 0, ["3"]);
+      CreateSafeInterval(DataIdentity2Mock, 3, ["4"]);
+      const clear2 = CreateSafeInterval(DataIdentity2Mock, 2000, args);
+
+      await vi.advanceTimersToNextTimerAsync();
+
+      expect(DataIdentityMock).toBeCalledTimes(1);
+      expect(DataIdentityMock).toBeCalledWith(...args);
+      expect(DataIdentityMock).toReturnWith(
+        args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
+      );
+
+      expect(DataIdentity2Mock).toBeCalledTimes(1);
+      expect(DataIdentity2Mock).toBeCalledWith(...args);
+      expect(DataIdentity2Mock).toReturnWith(
+        args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
+      );
+      clear();
+      clear2();
+      await vi.advanceTimersByTimeAsync(10000);
+      // expect the intervals to be cleared for both callables
+      expect(DataIdentityMock).toBeCalledTimes(1);
+      expect(DataIdentity2Mock).toBeCalledTimes(1);
+    });
+  }
+});
+
+describe("testing CreateSafeTimeout with different functions with single argument", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  for (const args of Arguments) {
+    it("two different timeouts for different callables", async () => {
+      CreateSafeTimeout(DataIdentityMock, 0, ["1"]);
+      CreateSafeTimeout(DataIdentityMock, 100000, ["2"]);
+      CreateSafeTimeout(DataIdentityMock, 0, ["3"]);
+      CreateSafeTimeout(DataIdentityMock, 3, ["4"]);
+      const clear = CreateSafeTimeout(DataIdentityMock, 2000, args);
+
+      CreateSafeTimeout(DataIdentity2Mock, 0, ["1"]);
+      CreateSafeTimeout(DataIdentity2Mock, 100000, ["2"]);
+      CreateSafeTimeout(DataIdentity2Mock, 0, ["3"]);
+      CreateSafeTimeout(DataIdentity2Mock, 3, ["4"]);
+      const clear2 = CreateSafeTimeout(DataIdentity2Mock, 2000, args);
+
+      await vi.advanceTimersToNextTimerAsync();
+      expect(DataIdentityMock).toBeCalledTimes(1);
+      expect(DataIdentityMock).toBeCalledWith(...args);
+      expect(DataIdentityMock).toReturnWith(
+        args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
+      );
+
+      expect(DataIdentity2Mock).toBeCalledTimes(1);
+      expect(DataIdentity2Mock).toBeCalledWith(...args);
+      expect(DataIdentity2Mock).toReturnWith(
+        args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
+      );
+
+      await vi.advanceTimersByTimeAsync(10000);
+      // expect no more callables to be executed even without the clear call
+      expect(DataIdentityMock).toBeCalledTimes(1);
+      expect(DataIdentity2Mock).toBeCalledTimes(1);
+
+      // expect no errors on expired clear calls
+
+      clear();
+      clear2();
+    });
+  }
+});
