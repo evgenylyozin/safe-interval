@@ -4,7 +4,7 @@ import {
   CreateSafeTimeout,
 } from "./index.js";
 
-// REWRITABILITY PROPERTY (SAFE INTERVAL AND TIMEOUT PROTECTS FROM REGISTERING THE SAME CALLABLE MULTIPLE TIMES EVEN WITH NO CLEAR CALL AND REWRITES ARGUMENTS AND TIMEOUT IF THEY CHANGE)
+// REWRITE PROPERTY (SAFE INTERVAL AND TIMEOUT PROTECTS FROM REGISTERING THE SAME CALLABLE MULTIPLE TIMES EVEN WITH NO CLEAR CALL AND REWRITES ARGUMENTS AND TIMEOUT IF THEY CHANGE)
 
 // synchronous functions
 const LogMessage = (m: string) => console.log(m);
@@ -87,7 +87,7 @@ setTimeout(LogMessage2, 1000, "4");
 setTimeout(LogMessage2, 1000, "from lm2");
 
 // asynchronous functions work the same as sync functions
-// rewritability property applies here too
+// REWRITE property applies here too
 const AsyncLogMessage = async (m: string) =>
   new Promise((r) => {
     setTimeout(() => {
@@ -147,7 +147,7 @@ CreateSafeTimeout(AsyncLogMessage2, 1000, ["3"]);
 CreateSafeTimeout(AsyncLogMessage2, 1000, ["4"]);
 CreateSafeTimeout(AsyncLogMessage2, 1000, ["from lm2"]);
 
-// NO CALL RESULTS INTERLEAVE PROPERTY
+// NO CALL RESULTS SHUFFLE PROPERTY
 // WHEN AN ASYNC FUNCTION IS REGISTERED WITH SAFE INTERVAL THE NEXT INVOCATION WILL BE ONLY AFTER THE PREVIOUS ONE RESOLVES
 // WHEN AN ASYNC FUNCTION IS REGISTERED WITH SAFE TIMEOUT
 // IN CASES WHEN THE TIMEOUT HAS PASSED AND THE FUNCTION IS ADDED TO THE STACK TO BE EXECUTED BUT DIDN'T RESOLVE YET
@@ -181,7 +181,7 @@ setTimeout(() => {
   WaitTillLastResolvedAndPrintQueues();
 }, 5000);
 
-// standard setInterval behavior, the results can interleave:
+// standard setInterval behavior, the results can SHUFFLE:
 const interval = setInterval(RandomAsyncLog, 1000);
 setTimeout(() => {
   clearInterval(interval);
@@ -197,7 +197,7 @@ setTimeout(() => {
   WaitTillLastResolvedAndPrintQueues();
 }, 7500); // wait all functions to resolve
 
-// standard setTimeout behavior, the results will interleave:
+// standard setTimeout behavior, the results will SHUFFLE:
 setTimeout(RandomAsyncLog, 1000, 5000);
 setTimeout(() => {
   setTimeout(RandomAsyncLog, 0, 1);
