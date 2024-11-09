@@ -1,8 +1,16 @@
 # Scheduled todos
 
-- create the readme file (see the info in the notes)
+- make stronger types for the callback in particular
 
-- might be make some setting or other means of getting the results of the callable operations back? (async generator or something)
+- add cases for callback
+
+- add comments for callback
+
+- what if the callable rejects or throws an error
+
+- what if the callable rejects or throws and the callback is defined
+
+- create the readme file (see the info in the notes)
 
 - check usage in node and browser contexts
 

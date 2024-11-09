@@ -884,3 +884,100 @@ describe("testing CreateSafeTimeout with different functions with single argumen
     });
   }
 });
+
+// callback usage tests
+const randNumArr = [];
+const ResolveAndReturnMock = vi.fn(async () => {
+  const randNum = Math.random() * 10;
+  randNumArr.push(randNum);
+  return await AsyncDataIdentity(randNum);
+});
+
+const Callback = (n: number) => {
+  return n;
+};
+const CallbackMock = vi.fn(Callback);
+describe("testing callback usage", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("callback is called for each interval in createSafeInterval", async () => {
+    const clear = CreateSafeInterval(
+      ResolveAndReturnMock,
+      1000,
+      [],
+      CallbackMock,
+    );
+    await PassTicksAndWaitForResolves(10, 1000);
+    clear();
+    // expect the mock to be called 10 times and be invoked with the same values as stored in the randNumArr
+    expect(CallbackMock).toBeCalledTimes(10);
+    CallbackMock.mock.calls.forEach((c, i) => {
+      expect(c[0]).toBe(randNumArr[i]);
+    });
+    const resultsArray = CallbackMock.mock.results.map((r) => r.value);
+    expect(resultsArray).toEqual(randNumArr);
+    randNumArr.length = 0;
+  });
+  it("callback is called for each interval in createSafeIntervalMultiple", async () => {
+    const clear = CreateSafeIntervalMultiple(
+      ResolveAndReturnMock,
+      1000,
+      [],
+      CallbackMock,
+    );
+    await PassTicksAndWaitForResolves(10, 1000);
+    clear();
+    // expect the mock to be called 10 times and be invoked with the same values as stored in the randNumArr
+    expect(CallbackMock).toBeCalledTimes(10);
+    CallbackMock.mock.calls.forEach((c, i) => {
+      expect(c[0]).toBe(randNumArr[i]);
+    });
+    const resultsArray = CallbackMock.mock.results.map((r) => r.value);
+    expect(resultsArray).toEqual(randNumArr);
+    randNumArr.length = 0;
+  });
+  it("callback is called for each timeout in createSafeTimeout", async () => {
+    for (let i = 0; i < 10; i++) {
+      const clear = CreateSafeTimeout(
+        ResolveAndReturnMock,
+        1000,
+        [],
+        CallbackMock,
+      );
+      await PassTickAndWaitForResolve(1000);
+      clear();
+    }
+    // expect the mock to be called 10 times and be invoked with the same values as stored in the randNumArr
+    expect(CallbackMock).toBeCalledTimes(10);
+    CallbackMock.mock.calls.forEach((c, i) => {
+      expect(c[0]).toBe(randNumArr[i]);
+    });
+    const resultsArray = CallbackMock.mock.results.map((r) => r.value);
+    expect(resultsArray).toEqual(randNumArr);
+    randNumArr.length = 0;
+  });
+  it("callback is called for each timeout in createSafeTimeoutMultiple", async () => {
+    for (let i = 0; i < 10; i++) {
+      const clear = CreateSafeTimeoutMultiple(
+        ResolveAndReturnMock,
+        1000,
+        [],
+        CallbackMock,
+      );
+      await PassTickAndWaitForResolve(1000);
+      clear();
+    }
+    // expect the mock to be called 10 times and be invoked with the same values as stored in the randNumArr
+    expect(CallbackMock).toBeCalledTimes(10);
+    CallbackMock.mock.calls.forEach((c, i) => {
+      expect(c[0]).toBe(randNumArr[i]);
+    });
+    const resultsArray = CallbackMock.mock.results.map((r) => r.value);
+    expect(resultsArray).toEqual(randNumArr);
+    randNumArr.length = 0;
+  });
+});

@@ -1,26 +1,38 @@
 // the function which is registered to be called after the timeout or periodically
-type Callable = (...args: unknown[]) => void;
+type Callable = (...args: unknown[]) => unknown;
 // the function which is returned after registering a new interval or timeout to remove such interval or timeout
 type Clear = (() => void) | undefined;
 // a map of callable to clear function
-type FunctionsToClear = Map<Callable, Clear>;
+type FunctionToClear = Map<Callable, Clear>;
 // a map of callable to its queue of unresolved async functions (which are essentially the wrappers around the callable)
-type FunctionsToQueue = Map<Callable, (() => Promise<void>)[]>;
+type FunctionToQueue = Map<Callable, (() => Promise<unknown>)[]>;
 // a map of callable to resolve loop status
-type FunctionsToLoop = Map<Callable, boolean>;
+type FunctionToLoop = Map<Callable, boolean>;
 
+// a possible callback to work with the result of a callable invocation
+type Callback = (callableReturn: ReturnType<Callable>) => unknown;
+// a map of callable to its callback
+type FunctionToCallback = Map<Callable, Callback>;
 /**
- * Destroys a timeout or interval by calling its clear function and removing callable from the FunctionsToClear map.
+ * Destroys a timeout or interval by calling its clear function and removing callable from the FunctionToClear map.
  * @param callable The callable function which is registered to be called after the timeout or periodically
  * @param ftc The map of callable to clear function
  */
-const destroy = (callable: Callable, ftc: FunctionsToClear) => {
+const destroy = (
+  callable: Callable,
+  ftc: FunctionToClear,
+  ftcb: FunctionToCallback,
+) => {
   if (ftc.has(callable)) {
     const Clear = ftc.get(callable);
     if (Clear) {
       Clear();
     }
     ftc.delete(callable);
+  }
+  // destroy the callback
+  if (ftcb && ftcb.has(callable)) {
+    ftcb.delete(callable);
   }
 };
 
@@ -29,7 +41,7 @@ const destroy = (callable: Callable, ftc: FunctionsToClear) => {
  * @param callable The callable function which is registered to be called after the timeout or periodically
  * @param ftq The map of callable to its queue of unresolved async functions (which are essentially the wrappers around the callable)
  */
-const setQueue = (callable: Callable, ftq: FunctionsToQueue) => {
+const setQueue = (callable: Callable, ftq: FunctionToQueue) => {
   if (!ftq.has(callable)) ftq.set(callable, []);
 };
 
@@ -38,8 +50,18 @@ const setQueue = (callable: Callable, ftq: FunctionsToQueue) => {
  * @param callable The callable function which is registered to be called after the timeout or periodically
  * @param ftl The map of callable to resolve loop status
  */
-const setLoop = (callable: Callable, ftl: FunctionsToLoop) => {
+const setLoop = (callable: Callable, ftl: FunctionToLoop) => {
   if (!ftl.has(callable)) ftl.set(callable, false);
+};
+
+const setCallback = (
+  callable: Callable,
+  cb: Callback,
+  ftcb: FunctionToCallback,
+) => {
+  if (!ftcb.has(callable) && cb) {
+    ftcb.set(callable, cb);
+  }
 };
 
 /**
@@ -52,7 +74,9 @@ const setLoop = (callable: Callable, ftl: FunctionsToLoop) => {
  */
 export const CreateSafeInterval = (() => {
   // to track all functions that are called in the safe interval
-  const FunctionsToClear: FunctionsToClear = new Map();
+  const FunctionToClear: FunctionToClear = new Map();
+  // to track the callbacks
+  const FunctionToCallback: FunctionToCallback = new Map();
   /**
    * Start a new safe interval for the provided function.
    * Intentionally not extracting this one to something more general between all functions
@@ -69,14 +93,18 @@ export const CreateSafeInterval = (() => {
     (function loop() {
       const TimeoutID = setTimeout(async () => {
         // wait till the function is fully executed
-        await callable(...callableArgs);
+        const r = await callable(...callableArgs);
+        // call the cb if provided
+        if (FunctionToCallback.has(callable)) {
+          FunctionToCallback.get(callable)!(r);
+        }
         // and repeat if the callable is still available
-        if (FunctionsToClear.has(callable)) {
+        if (FunctionToClear.has(callable)) {
           loop();
         }
       }, timeout);
       // on each loop refresh the clear function to clear currently set timeout
-      FunctionsToClear.set(callable, () => {
+      FunctionToClear.set(callable, () => {
         clearTimeout(TimeoutID);
       });
     })();
@@ -93,8 +121,10 @@ export const CreateSafeInterval = (() => {
     callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
+    cb?: Callback,
   ): void => {
-    destroy(callable, FunctionsToClear);
+    destroy(callable, FunctionToClear, FunctionToCallback);
+    setCallback(callable, cb, FunctionToCallback);
     startNewSafeInterval(callable, timeout, callableArgs);
   };
 
@@ -109,11 +139,12 @@ export const CreateSafeInterval = (() => {
     callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
+    cb?: Callback,
   ): (() => void) => {
-    registerCallable(callable, timeout, callableArgs);
+    registerCallable(callable, timeout, callableArgs, cb);
     // return the function to destroy the interval
     return () => {
-      destroy(callable, FunctionsToClear);
+      destroy(callable, FunctionToClear, FunctionToCallback);
     };
   };
 })();
@@ -132,9 +163,11 @@ export const CreateSafeIntervalMultiple = (
   callable: Callable,
   timeout: number | undefined,
   callableArgs: unknown[],
+  cb?: Callback,
 ) => {
   // to track single function that is called in the safe interval
   let Clear: Clear = undefined;
+
   /**
    * Start a new safe interval for the provided function.
    * @param callable Function to be called at each interval.
@@ -149,7 +182,11 @@ export const CreateSafeIntervalMultiple = (
     (function loop() {
       const TimeoutID = setTimeout(async () => {
         // wait till the function is fully executed
-        await callable(...callableArgs);
+        const r = await callable(...callableArgs);
+        // call the cb if provided
+        if (cb) {
+          cb(r);
+        }
         // and repeat if not cleared
         if (Clear) {
           loop();
@@ -176,12 +213,13 @@ export const CreateSafeIntervalMultiple = (
 
 export const CreateSafeTimeout = (() => {
   // to track all functions that are called in the safe timeout
-  const FunctionsToClear: FunctionsToClear = new Map();
+  const FunctionToClear: FunctionToClear = new Map();
   // resolve queue
-  const FunctionsToQueue: FunctionsToQueue = new Map();
+  const FunctionToQueue: FunctionToQueue = new Map();
   // track loop status
-  const FunctionsToLoop: FunctionsToLoop = new Map();
-
+  const FunctionToLoop: FunctionToLoop = new Map();
+  // to track callbacks
+  const FunctionToCallback: FunctionToCallback = new Map();
   /**
    * Start a new safe timeout for the provided function.
    * @param callable Function to be called at the timeout.
@@ -196,13 +234,13 @@ export const CreateSafeTimeout = (() => {
     const TimeoutID = setTimeout(() => {
       // push the function into the queue
       // if the callable is scheduled after the timeout passes (not cancelled)
-      // the FunctionsToQueue map should already have the callable as the registered key
-      if (FunctionsToQueue.has(callable)) {
+      // the FunctionToQueue map should already have the callable as the registered key
+      if (FunctionToQueue.has(callable)) {
         // push the callable wrapped in an async function
         // to then call and resolve it in the order of the queue
         // the actual call is made by the resolve loop
-        FunctionsToQueue.get(callable)!.push(async () => {
-          await callable(...callableArgs);
+        FunctionToQueue.get(callable)!.push(async () => {
+          return await callable(...callableArgs);
         });
         // after the push try to initiate the new loop
         // if not already started
@@ -210,44 +248,48 @@ export const CreateSafeTimeout = (() => {
       }
     }, timeout);
     // refresh the clear function to clear currently set timeout
-    FunctionsToClear.set(callable, () => {
+    FunctionToClear.set(callable, () => {
       clearTimeout(TimeoutID);
     });
   };
 
   /**
-   * Starts a new resolve loop for the given callable only if the callable is registered in the FunctionsToLoop map
+   * Starts a new resolve loop for the given callable only if the callable is registered in the FunctionToLoop map
    * and it is not already started.
    * The loop calls the first callable from the queue if any.
-   * If the queue is empty the loop destroys the keys in FunctionsToLoop and FunctionsToQueue and ends.
-   * @param callable The callable to start the loop for.
+   * If the queue is empty the loop destroys the keys in FunctionToLoop and FunctionToQueue and ends.
+   * @param callable The callable to start the loop for (the original callable, not the wrapped one).
    */
   const startResolveLoopIfNeeded = (callable: Callable) => {
-    // start the new loop only if the callable is registered in the FunctionsToLoop map
+    // start the new loop only if the callable is registered in the FunctionToLoop map
     // and it is not already started
-    if (FunctionsToLoop.has(callable) && !FunctionsToLoop.get(callable)) {
+    if (FunctionToLoop.has(callable) && !FunctionToLoop.get(callable)) {
       // set the resolve loop status
-      FunctionsToLoop.set(callable, true);
+      FunctionToLoop.set(callable, true);
 
       // start the resolve loop
       (async function loop() {
         // get the current queue
-        const queue = FunctionsToQueue.get(callable);
+        const queue = FunctionToQueue.get(callable);
         // if the queue is not empty
         if (queue && queue.length > 0) {
           // get the first callable from the queue
-          const callable = queue.shift();
-          if (callable) {
-            // call the callable awaiting for the resolve
-            await callable();
+          const wrappedCallable = queue.shift();
+          if (wrappedCallable) {
+            // call the wrapped callable awaiting for the resolve
+            const r = await wrappedCallable();
+            // call the cb if provided
+            if (FunctionToCallback.has(callable)) {
+              FunctionToCallback.get(callable)!(r);
+            }
             // and repeat the loop
             loop();
           }
         } else {
           // here we know that the queue is empty
-          // so we can destroy the keys in FunctionsToLoop and FunctionsToQueue
-          FunctionsToLoop.delete(callable);
-          FunctionsToQueue.delete(callable);
+          // so we can destroy the keys in FunctionToLoop and FunctionToQueue
+          FunctionToLoop.delete(callable);
+          FunctionToQueue.delete(callable);
         }
       })();
     }
@@ -265,10 +307,12 @@ export const CreateSafeTimeout = (() => {
     callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
+    cb?: Callback,
   ): void => {
-    destroy(callable, FunctionsToClear);
-    setQueue(callable, FunctionsToQueue);
-    setLoop(callable, FunctionsToLoop);
+    destroy(callable, FunctionToClear, FunctionToCallback);
+    setCallback(callable, cb, FunctionToCallback);
+    setQueue(callable, FunctionToQueue);
+    setLoop(callable, FunctionToLoop);
     startNewSafeTimeout(callable, timeout, callableArgs);
   };
 
@@ -283,11 +327,12 @@ export const CreateSafeTimeout = (() => {
     callable: Callable,
     timeout: number | undefined,
     callableArgs: unknown[],
+    cb?: Callback,
   ): (() => void) => {
-    registerCallable(callable, timeout, callableArgs);
+    registerCallable(callable, timeout, callableArgs, cb);
     // return the function to destroy the timeout
     return () => {
-      destroy(callable, FunctionsToClear);
+      destroy(callable, FunctionToClear, FunctionToCallback);
     };
   };
 })();
@@ -305,8 +350,16 @@ export const CreateSafeTimeoutMultiple = (
   callable: Callable,
   timeout: number | undefined,
   callableArgs: unknown[],
+  cb?: Callback,
 ) => {
-  const Timeout = setTimeout(callable, timeout, ...callableArgs);
+  const Timeout = setTimeout(async () => {
+    // wait till the function is fully executed
+    const r = await callable(...callableArgs);
+    // call the cb if provided
+    if (cb) {
+      cb(r);
+    }
+  }, timeout);
   return () => {
     clearTimeout(Timeout);
   };
