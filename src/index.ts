@@ -10,9 +10,11 @@ type FunctionToQueue = Map<Callable, (() => Promise<unknown>)[]>;
 type FunctionToLoop = Map<Callable, boolean>;
 
 // a possible callback to work with the result of a callable invocation
-type Callback = (callableReturn: ReturnType<Callable>) => unknown;
+export type Callback<T extends Callable> = (
+  callableReturn: Awaited<ReturnType<T>>,
+) => unknown;
 // a map of callable to its callback
-type FunctionToCallback = Map<Callable, Callback>;
+type FunctionToCallback = Map<Callable, Callback<Callable>>;
 /**
  * Destroys a timeout or interval by calling its clear function and removing callable from the FunctionToClear map.
  * @param callable The callable function which is registered to be called after the timeout or periodically
@@ -54,9 +56,9 @@ const setLoop = (callable: Callable, ftl: FunctionToLoop) => {
   if (!ftl.has(callable)) ftl.set(callable, false);
 };
 
-const setCallback = (
-  callable: Callable,
-  cb: Callback,
+const setCallback = <T extends Callable>(
+  callable: T,
+  cb: Callback<T>,
   ftcb: FunctionToCallback,
 ) => {
   if (!ftcb.has(callable) && cb) {
@@ -85,10 +87,10 @@ export const CreateSafeInterval = (() => {
    * @param timeout Interval in milliseconds.
    * @param callableArgs Arguments for the function.
    */
-  const startNewSafeInterval = (
-    callable: Callable,
+  const startNewSafeInterval = <T extends Callable>(
+    callable: T,
     timeout: number | undefined,
-    callableArgs: unknown[],
+    callableArgs: Parameters<T>,
   ) => {
     (function loop() {
       const TimeoutID = setTimeout(async () => {
@@ -117,11 +119,11 @@ export const CreateSafeInterval = (() => {
    * @param timeout Interval duration in milliseconds.
    * @param callableArgs Additional arguments for the callable function.
    */
-  const registerCallable = (
-    callable: Callable,
+  const registerCallable = <T extends Callable>(
+    callable: T,
     timeout: number | undefined,
-    callableArgs: unknown[],
-    cb?: Callback,
+    callableArgs: Parameters<T>,
+    cb?: Callback<T>,
   ): void => {
     destroy(callable, FunctionToClear, FunctionToCallback);
     setCallback(callable, cb, FunctionToCallback);
@@ -135,11 +137,11 @@ export const CreateSafeInterval = (() => {
    * @param callableArgs Arguments for the function.
    * @returns A function that, when called, stops the interval from executing further.
    */
-  return (
-    callable: Callable,
+  return <T extends Callable>(
+    callable: T,
     timeout: number | undefined,
-    callableArgs: unknown[],
-    cb?: Callback,
+    callableArgs: Parameters<T>,
+    cb?: Callback<T>,
   ): (() => void) => {
     registerCallable(callable, timeout, callableArgs, cb);
     // return the function to destroy the interval
@@ -159,11 +161,11 @@ export const CreateSafeInterval = (() => {
  * not like standard CreateSafeInterval:
  * - creates interval for the same callable each time allowing for not related intervals calling the same callable (no matter the arguments, timeout)
  */
-export const CreateSafeIntervalMultiple = (
-  callable: Callable,
+export const CreateSafeIntervalMultiple = <T extends Callable>(
+  callable: T,
   timeout: number | undefined,
-  callableArgs: unknown[],
-  cb?: Callback,
+  callableArgs: Parameters<T>,
+  cb?: Callback<T>,
 ) => {
   // to track single function that is called in the safe interval
   let Clear: Clear = undefined;
@@ -175,14 +177,14 @@ export const CreateSafeIntervalMultiple = (
    * @param callableArgs Arguments for the function.
    */
   const startNewSafeInterval = (
-    callable: Callable,
+    callable: T,
     timeout: number | undefined,
-    callableArgs: unknown[],
+    callableArgs: Parameters<T>,
   ) => {
     (function loop() {
       const TimeoutID = setTimeout(async () => {
         // wait till the function is fully executed
-        const r = await callable(...callableArgs);
+        const r = (await callable(...callableArgs)) as Awaited<ReturnType<T>>;
         // call the cb if provided
         if (cb) {
           cb(r);
@@ -226,10 +228,10 @@ export const CreateSafeTimeout = (() => {
    * @param timeout Timeout in milliseconds.
    * @param callableArgs Arguments for the function.
    */
-  const startNewSafeTimeout = (
-    callable: Callable,
+  const startNewSafeTimeout = <T extends Callable>(
+    callable: T,
     timeout: number | undefined,
-    callableArgs: unknown[],
+    callableArgs: Parameters<T>,
   ) => {
     const TimeoutID = setTimeout(() => {
       // push the function into the queue
@@ -303,11 +305,11 @@ export const CreateSafeTimeout = (() => {
    * @param timeout Timeout duration in milliseconds.
    * @param callableArgs Additional arguments for the callable.
    */
-  const registerCallable = (
-    callable: Callable,
+  const registerCallable = <T extends Callable>(
+    callable: T,
     timeout: number | undefined,
-    callableArgs: unknown[],
-    cb?: Callback,
+    callableArgs: Parameters<T>,
+    cb?: Callback<T>,
   ): void => {
     destroy(callable, FunctionToClear, FunctionToCallback);
     setCallback(callable, cb, FunctionToCallback);
@@ -323,11 +325,11 @@ export const CreateSafeTimeout = (() => {
    * @param callableArgs Arguments for the function.
    * @returns A function that, when called, stops the timeout.
    */
-  return (
-    callable: Callable,
+  return <T extends Callable>(
+    callable: T,
     timeout: number | undefined,
-    callableArgs: unknown[],
-    cb?: Callback,
+    callableArgs: Parameters<T>,
+    cb?: Callback<T>,
   ): (() => void) => {
     registerCallable(callable, timeout, callableArgs, cb);
     // return the function to destroy the timeout
@@ -346,15 +348,15 @@ export const CreateSafeTimeout = (() => {
  * For example, if there is a need to fetch multiple different resources once per timeout, or the same resource but with different timeouts.
  * Every call to the function creates a new timeout not related to any other timeouts
  */
-export const CreateSafeTimeoutMultiple = (
-  callable: Callable,
+export const CreateSafeTimeoutMultiple = <T extends Callable>(
+  callable: T,
   timeout: number | undefined,
-  callableArgs: unknown[],
-  cb?: Callback,
+  callableArgs: Parameters<T>,
+  cb?: Callback<T>,
 ) => {
   const Timeout = setTimeout(async () => {
     // wait till the function is fully executed
-    const r = await callable(...callableArgs);
+    const r = (await callable(...callableArgs)) as Awaited<ReturnType<T>>;
     // call the cb if provided
     if (cb) {
       cb(r);

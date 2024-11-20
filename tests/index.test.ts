@@ -10,7 +10,7 @@ const Arguments = [
   [], // test the function with 0 arguments
   ["5"], // test the function with 1 argument
   [[1, 2, 3], { hello: "world" }, "5", null, undefined], // test the function with multiple arguments
-];
+] as [unknown, unknown, unknown, unknown, unknown][]; // assertion to provide the typescript information on max num of arguments;
 const DataIdentity = (
   a1?: unknown,
   a2?: unknown,
@@ -890,7 +890,7 @@ const randNumArr = [];
 const ResolveAndReturnMock = vi.fn(async () => {
   const randNum = Math.random() * 10;
   randNumArr.push(randNum);
-  return await AsyncDataIdentity(randNum);
+  return (await AsyncDataIdentity(randNum)) as number;
 });
 
 const Callback = (n: number) => {

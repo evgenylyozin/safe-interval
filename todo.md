@@ -1,7 +1,5 @@
 # Scheduled todos
 
-- make stronger types for the callback in particular
-
 - add cases for callback
 
 - add comments for callback
