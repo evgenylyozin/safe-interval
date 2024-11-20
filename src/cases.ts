@@ -212,4 +212,55 @@ setTimeout(() => {
 const c3 = CreateSafeIntervalMultiple(RandomAsyncLog, 1000, []);
 setTimeout(() => c3(), 5000);
 
-// CreateSafeTimeout is the same as setTimeout
+// CreateSafeTimeout is the same as setTimeout in regards with async functions
+
+// CASES WITH THE CALLBACK FUNCTION DEFINED
+//
+// WITH STANDARD INTERVAL OR TIMEOUT THE RESULTS COULD BE
+// USED ONLY IF THE FUNCTION WHICH IS CALLED IN THE
+// INTERVAL OR TIMEOUT CALLS EXTERNAL FUNCTIONS ITSELF
+
+// IN GENERAL, PROVIDING THE CALLBACK ALLOWS FOR DECOUPLING
+// THE FUNCTION CALL AND THE CALL RESULT HANDLING
+const SyncNumIdentity = (a: number) => a;
+const AsyncNumIdentity = (a: number): Promise<number> =>
+  new Promise((r) => setTimeout(() => r(a), 1000));
+const LogNumCallback = (a: number) => {
+  console.log("Logging from LogNumCallback:");
+  console.log(a);
+};
+// each second the callback should be called with the number 1
+CreateSafeInterval(SyncNumIdentity, 1000, [1], LogNumCallback);
+// the same but with standard interval
+// the callback has to be defined in the SyncNumIdentity for example
+const SyncNumIdentityWithLog = (a: number) => {
+  console.log("Logging from SyncNumIdentityWithLog:");
+  console.log(a);
+  return a;
+};
+setInterval(SyncNumIdentityWithLog, 1000, 1);
+
+// the same with async functions
+// but every 2 seconds for the safe interval
+// and 2 seconds the first time and then every ~1 second for the standard interval
+CreateSafeInterval(AsyncNumIdentity, 1000, [1], LogNumCallback);
+
+const AsyncNumIdentityWithLog = (a: number) =>
+  new Promise((r) => {
+    setTimeout(() => {
+      console.log("Logging from AsyncNumIdentityWithLog:");
+      console.log(a);
+      r(a);
+    }, 1000);
+  });
+setInterval(AsyncNumIdentityWithLog, 1000, 1);
+
+// the same for sync and async functions used in safe timeout
+
+CreateSafeTimeout(SyncNumIdentity, 1000, [1], LogNumCallback);
+
+setTimeout(SyncNumIdentityWithLog, 1000, 1);
+
+CreateSafeTimeout(AsyncNumIdentity, 1000, [1], LogNumCallback);
+
+setTimeout(AsyncNumIdentityWithLog, 1000, 1);

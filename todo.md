@@ -1,7 +1,5 @@
 # Scheduled todos
 
-- add cases for callback
-
 - add comments for callback
 
 - what if the callable rejects or throws an error

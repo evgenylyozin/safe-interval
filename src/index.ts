@@ -58,7 +58,7 @@ const setLoop = (callable: Callable, ftl: FunctionToLoop) => {
 
 const setCallback = <T extends Callable>(
   callable: T,
-  cb: Callback<T>,
+  cb: Callback<T> | undefined,
   ftcb: FunctionToCallback,
 ) => {
   if (!ftcb.has(callable) && cb) {
