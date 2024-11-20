@@ -896,7 +896,13 @@ const ResolveAndReturnMock = vi.fn(async () => {
 const Callback = (n: number) => {
   return n;
 };
+const OtherCallback = (n: number) => {
+  return n + 1;
+};
+
 const CallbackMock = vi.fn(Callback);
+const OtherCallbackMock = vi.fn(OtherCallback);
+
 describe("testing callback usage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -979,5 +985,61 @@ describe("testing callback usage", () => {
     const resultsArray = CallbackMock.mock.results.map((r) => r.value);
     expect(resultsArray).toEqual(randNumArr);
     randNumArr.length = 0;
+  });
+  it("callback is deregistered on new callback supply for SafeInterval", async () => {
+    CreateSafeInterval(ResolveAndReturnMock, 1000, [], CallbackMock);
+    const clear = CreateSafeInterval(
+      ResolveAndReturnMock,
+      1000,
+      [],
+      OtherCallbackMock,
+    );
+    await PassTicksAndWaitForResolves(10, 1000);
+    clear();
+    // expect the CallbackMock not called and OtherCallbackMock called 10 times
+    expect(CallbackMock).toBeCalledTimes(0);
+    expect(OtherCallbackMock).toBeCalledTimes(10);
+  });
+  it("callback is deregistered on new callback supply for SafeTimeout", async () => {
+    CreateSafeTimeout(ResolveAndReturnMock, 1000, [], CallbackMock);
+    CreateSafeTimeout(ResolveAndReturnMock, 1000, [], OtherCallbackMock);
+    await PassTicksAndWaitForResolves(10, 1000);
+    // expect the CallbackMock not called and OtherCallbackMock called 1 time
+    expect(CallbackMock).toBeCalledTimes(0);
+    expect(OtherCallbackMock).toBeCalledTimes(1);
+  });
+  it("if the callable is pushed on the stack but the callback is deregistered => the new callback is called after the callable resolves in SafeInterval", async () => {
+    CreateSafeInterval(ResolveAndReturnMock, 1000, [], CallbackMock);
+    // wait till the callable is pushed on the stack
+    await vi.advanceTimersByTimeAsync(1000);
+    // swap the callback
+    const clear = CreateSafeInterval(
+      ResolveAndReturnMock,
+      1000,
+      [],
+      OtherCallbackMock,
+    );
+    await vi.advanceTimersToNextTimerAsync(); // wait till the first callable resolves
+    clear();
+    // expect the CallbackMock not called and OtherCallbackMock called 1 time
+    expect(CallbackMock).toBeCalledTimes(0);
+    expect(OtherCallbackMock).toBeCalledTimes(1);
+  });
+  it("if the callable is pushed on the stack but the callback is deregistered => the new callback is called after the callable resolves in SafeTimeout", async () => {
+    CreateSafeTimeout(ResolveAndReturnMock, 1000, [], CallbackMock);
+    // wait till the callable is pushed on the stack
+    await vi.advanceTimersByTimeAsync(1000);
+    // swap the callback
+    const clear = CreateSafeTimeout(
+      ResolveAndReturnMock,
+      1000,
+      [],
+      OtherCallbackMock,
+    );
+    await vi.advanceTimersToNextTimerAsync(); // wait till the first callable resolves
+    clear();
+    // expect the CallbackMock not called and OtherCallbackMock called 1 time
+    expect(CallbackMock).toBeCalledTimes(0);
+    expect(OtherCallbackMock).toBeCalledTimes(1);
   });
 });

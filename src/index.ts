@@ -10,7 +10,7 @@ type FunctionToQueue = Map<Callable, (() => Promise<unknown>)[]>;
 type FunctionToLoop = Map<Callable, boolean>;
 
 // a possible callback to work with the result of a callable invocation
-export type Callback<T extends Callable> = (
+type Callback<T extends Callable> = (
   callableReturn: Awaited<ReturnType<T>>,
 ) => unknown;
 // a map of callable to its callback
@@ -56,6 +56,12 @@ const setLoop = (callable: Callable, ftl: FunctionToLoop) => {
   if (!ftl.has(callable)) ftl.set(callable, false);
 };
 
+/**
+ * Initializes the callback for a callable.
+ * @param callable The callable function which is registered to be called after the timeout or periodically
+ * @param cb The callback to be called with the result of the callable invocation
+ * @param ftcb The map of callable to its callback
+ */
 const setCallback = <T extends Callable>(
   callable: T,
   cb: Callback<T> | undefined,
@@ -73,6 +79,10 @@ const setCallback = <T extends Callable>(
  * - no shuffling of the callable invocations and resolved results (like if an async function was not finished yet but the next one is already called and finished before the first one)
  * - only one interval for the same callable
  * - predictable clear interval (if the interval is cleared before the callable added to the stack then no call will be made, if it was added already - the result will be in the predictable order)
+ * Can accept a callback function which is expecting the result of the callable as its argument
+ * if the callback is provided then it is going to be called after the callable resolves
+ * in case of the interval => the callback is called many times
+ * the callback function can be used to work with the results of the callable invocations
  */
 export const CreateSafeInterval = (() => {
   // to track all functions that are called in the safe interval
