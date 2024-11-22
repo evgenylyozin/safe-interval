@@ -1043,3 +1043,300 @@ describe("testing callback usage", () => {
     expect(OtherCallbackMock).toBeCalledTimes(1);
   });
 });
+
+// REJECTS AND ERROR THROWS
+const ErrorThrow = () => {
+  try {
+    throw new Error("error");
+  } catch (e) {
+    // handle the error in the callable or the script will crash
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    e;
+  }
+};
+const ErrorThrowMock = vi.fn(ErrorThrow);
+
+// reject in terms of handling are the same as errors
+const Reject = async () => {
+  try {
+    await Promise.reject("reject");
+  } catch (e) {
+    // handle the error in the callable or the script will crash
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    e;
+  }
+};
+const RejectMock = vi.fn(Reject);
+
+const IdentityCallback = (v: unknown) => v;
+const IdentityCallbackMock = vi.fn(IdentityCallback);
+
+const ErrorThrowWithReturn = () => {
+  try {
+    throw new Error("error");
+  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    e;
+    return 1;
+  }
+};
+const ErrorThrowWithReturnMock = vi.fn(ErrorThrowWithReturn);
+
+const RejectWithReturn = async () => {
+  try {
+    await Promise.reject("reject");
+  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    e;
+    return 1;
+  }
+};
+const RejectWithReturnMock = vi.fn(RejectWithReturn);
+
+describe("testing rejects and error throws", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("error thrown in safe interval if caught in the callable then interval proceeds", async () => {
+    const clear = CreateSafeInterval(ErrorThrowMock, 1000, []);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(ErrorThrowMock).toBeCalledTimes(2);
+  });
+  it("error thrown in safe timeout if caught in the callable then timeout finishes successfully", async () => {
+    const clear = CreateSafeTimeout(ErrorThrowMock, 1000, []);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(ErrorThrowMock).toBeCalledTimes(1);
+  });
+  it("error thrown in safe interval multiple if caught in the callable then interval proceeds", async () => {
+    const clear = CreateSafeIntervalMultiple(ErrorThrowMock, 1000, []);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(ErrorThrowMock).toBeCalledTimes(2);
+  });
+  it("error thrown in safe timeout multiple if caught in the callable then timeout finishes successfully", async () => {
+    const clear = CreateSafeTimeoutMultiple(ErrorThrowMock, 1000, []);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(ErrorThrowMock).toBeCalledTimes(1);
+  });
+  it("reject in safe interval if caught in the callable then interval proceeds", async () => {
+    const clear = CreateSafeInterval(RejectMock, 1000, []);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(RejectMock).toBeCalledTimes(2);
+  });
+  it("reject in safe timeout if caught in the callable then timeout finishes successfully", async () => {
+    const clear = CreateSafeTimeout(RejectMock, 1000, []);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(RejectMock).toBeCalledTimes(1);
+  });
+  it("reject in safe interval multiple if caught in the callable then interval proceeds", async () => {
+    const clear = CreateSafeIntervalMultiple(RejectMock, 1000, []);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(RejectMock).toBeCalledTimes(2);
+  });
+  it("reject in safe timeout multiple if caught in the callable then timeout finishes successfully", async () => {
+    const clear = CreateSafeTimeoutMultiple(RejectMock, 1000, []);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(RejectMock).toBeCalledTimes(1);
+  });
+  // the throws and rejects are not resolved values so the callback function if any will be called with undefined instead of the resolved value
+  it("error thrown in safe interval if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
+    const clear = CreateSafeInterval(
+      ErrorThrowMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(undefined);
+  });
+  it("error thrown in safe timeout if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
+    const clear = CreateSafeTimeout(
+      ErrorThrowMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(undefined);
+  });
+  it("error thrown in safe interval multiple if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
+    const clear = CreateSafeIntervalMultiple(
+      ErrorThrowMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(undefined);
+  });
+  it("error thrown in safe timeout multiple if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
+    const clear = CreateSafeTimeoutMultiple(
+      ErrorThrowMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(undefined);
+  });
+  // the same for rejects
+  it("reject in safe interval if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
+    const clear = CreateSafeInterval(
+      RejectMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(undefined);
+  });
+  it("reject in safe timeout if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
+    const clear = CreateSafeTimeout(RejectMock, 1000, [], IdentityCallbackMock);
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(undefined);
+  });
+  it("reject in safe interval multiple if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
+    const clear = CreateSafeIntervalMultiple(
+      RejectMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(undefined);
+  });
+  it("reject in safe timeout multiple if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
+    const clear = CreateSafeTimeoutMultiple(
+      RejectMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(undefined);
+  });
+  // if the callable handles an error and returns some value then this value should be passed to the callback if defined
+  it("error thrown in safe interval if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
+    const clear = CreateSafeInterval(
+      ErrorThrowWithReturnMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+  it("error thrown in safe timeout if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
+    const clear = CreateSafeTimeout(
+      ErrorThrowWithReturnMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+  it("error thrown in safe interval multiple if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
+    const clear = CreateSafeIntervalMultiple(
+      ErrorThrowWithReturnMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+  it("error thrown in safe timeout multiple if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
+    const clear = CreateSafeTimeoutMultiple(
+      ErrorThrowWithReturnMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+  // the same for rejects
+  it("reject in safe interval if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
+    const clear = CreateSafeInterval(
+      RejectWithReturnMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+  it("reject in safe timeout if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
+    const clear = CreateSafeTimeout(
+      RejectWithReturnMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+  it("reject in safe interval multiple if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
+    const clear = CreateSafeIntervalMultiple(
+      RejectWithReturnMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+  it("reject in safe timeout multiple if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
+    const clear = CreateSafeTimeoutMultiple(
+      RejectWithReturnMock,
+      1000,
+      [],
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    clear();
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+});
