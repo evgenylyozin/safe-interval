@@ -83,6 +83,10 @@ const setCallback = <T extends Callable>(
  * if the callback is provided then it is going to be called after the callable resolves
  * in case of the interval => the callback is called many times
  * the callback function can be used to work with the results of the callable invocations
+ * @summary The results of safe interval for the same callable could potentially shuffle.
+ * Specifically in cases when the interval schedules the callable to be executed (already adds it to the stack) but the same callable
+ * is then registered with new safe interval.
+ * Then there is a chance that the next call will finish earlier if the first one takes longer to resolve than new interval time+time to resolve of the second call.
  */
 export const CreateSafeInterval = (() => {
   // to track all functions that are called in the safe interval
@@ -128,6 +132,7 @@ export const CreateSafeInterval = (() => {
    * @param callable Function to be executed at each interval.
    * @param timeout Interval duration in milliseconds.
    * @param callableArgs Additional arguments for the callable function.
+   * @param cb Optional callback function to be called with the result of the callable function.
    */
   const registerCallable = <T extends Callable>(
     callable: T,
@@ -145,6 +150,7 @@ export const CreateSafeInterval = (() => {
    * @param callable Function to be called at each interval.
    * @param timeout Interval in milliseconds.
    * @param callableArgs Arguments for the function.
+   * @param cb Optional callback function to be called with the result of the callable function.
    * @returns A function that, when called, stops the interval from executing further.
    */
   return <T extends Callable>(
@@ -165,10 +171,10 @@ export const CreateSafeInterval = (() => {
  * Use this function if there is a need to setup multiple intervals for the same callable.
  * For example, if there is a need to fetch multiple different resources periodically, or the same resource but with different timeouts.
  * Every call to the function creates a new interval
- * characteristics which remain from standard CreateSafeInterval:
+ * characteristics which remain from CreateSafeInterval:
  * - no shuffling of the callable invocations and resolved results (inside the same interval)
  * - predictable clear interval
- * not like standard CreateSafeInterval:
+ * not like CreateSafeInterval:
  * - creates interval for the same callable each time allowing for not related intervals calling the same callable (no matter the arguments, timeout)
  */
 export const CreateSafeIntervalMultiple = <T extends Callable>(
@@ -223,6 +229,20 @@ export const CreateSafeIntervalMultiple = <T extends Callable>(
   };
 };
 
+/**
+ * Function to manage the execution of a given function with specified timeout, ensuring single timeout for the same callable no matter the arguments.
+ * @returns A function that, when called, clears the timeout.
+ * Main points of the safe timeout are:
+ * - only one timeout for the same callable
+ * - predictable clear timeout (if the timeout is cleared before the callable added to the stack then no call will be made, if it was added already - the callable will be executed)
+ * Can accept a callback function which is expecting the result of the callable as its argument
+ * if the callback is provided then it is going to be called after the callable resolves
+ * in case of the timeout => the callback is called 1 time
+ * @summary The results of safe timeout for the same callable could potentially shuffle.
+ * Specifically in cases when the timeout schedules the callable to be executed (already adds it to the stack) but the same callable
+ * is then registered with new safe timeout.
+ * Then there is a chance that the second call will finish earlier if the first one takes longer to resolve than new timeout+time to resolve of the second call.
+ */
 export const CreateSafeTimeout = (() => {
   // to track all functions that are called in the safe timeout
   const FunctionToClear: FunctionToClear = new Map();
@@ -314,6 +334,7 @@ export const CreateSafeTimeout = (() => {
    * @param callable Function to be executed after the timeout.
    * @param timeout Timeout duration in milliseconds.
    * @param callableArgs Additional arguments for the callable.
+   * @param cb Optional Callback to be executed after the callable resolves.
    */
   const registerCallable = <T extends Callable>(
     callable: T,
@@ -333,6 +354,7 @@ export const CreateSafeTimeout = (() => {
    * @param callable Function to be called at the timeout.
    * @param timeout Timeout in milliseconds.
    * @param callableArgs Arguments for the function.
+   * @param cb Optional callback function to be called with the result of the callable function.
    * @returns A function that, when called, stops the timeout.
    */
   return <T extends Callable>(
@@ -350,10 +372,9 @@ export const CreateSafeTimeout = (() => {
 })();
 
 /**
- * This is just a wrapper for setTimeout, returning a function that clears the timeout
- * Just for convenience
- * The default setTimeout can be used instead
- *
+ * This is mainly just a wrapper for setTimeout, returning a function that clears the timeout
+ * The difference is only in the callback which could be provided to
+ * work with the result of the callable invocation
  * Use this function if there is a need to setup multiple timeouts for the same callable.
  * For example, if there is a need to fetch multiple different resources once per timeout, or the same resource but with different timeouts.
  * Every call to the function creates a new timeout not related to any other timeouts
