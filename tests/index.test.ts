@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  CreateSafeInterval,
-  CreateSafeIntervalMultiple,
-  CreateSafeTimeout,
-  CreateSafeTimeoutMultiple,
-} from "../src/index.js";
+import { CreateSafe, CreateSafeMultiple } from "../src/index.js";
 
 const Arguments = [
   [], // test the function with 0 arguments
@@ -23,7 +18,7 @@ const DataIdentity = (
 
 const DataIdentityMock = vi.fn(DataIdentity);
 
-describe("testing CreateSafeInterval with synchronous function with single argument", () => {
+describe("testing CreateSafe as interval with synchronous function with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -36,11 +31,11 @@ describe("testing CreateSafeInterval with synchronous function with single argum
       // the callable should be called once with the expected data
       // only one interval for the same callable
       // even with different inputs and timeout
-      CreateSafeInterval(DataIdentityMock, 0, ["1"]);
-      CreateSafeInterval(DataIdentityMock, 100000, ["2"]);
-      CreateSafeInterval(DataIdentityMock, 0, ["3"]);
-      CreateSafeInterval(DataIdentityMock, 3, ["4"]);
-      const clear = CreateSafeInterval(DataIdentityMock, 2000, args);
+      CreateSafe(DataIdentityMock, 0, ["1"], true);
+      CreateSafe(DataIdentityMock, 100000, ["2"], true);
+      CreateSafe(DataIdentityMock, 0, ["3"], true);
+      CreateSafe(DataIdentityMock, 3, ["4"], true);
+      const clear = CreateSafe(DataIdentityMock, 2000, args, true);
       await vi.advanceTimersToNextTimerAsync();
       expect(DataIdentityMock).toBeCalledTimes(1);
       expect(DataIdentityMock).toBeCalledWith(...args);
@@ -52,13 +47,13 @@ describe("testing CreateSafeInterval with synchronous function with single argum
   }
 
   it("interval stops and no callable is executed if the clear function is called before the timeout", async () => {
-    const clear = CreateSafeInterval(DataIdentityMock, 5000, ["1000000"]);
+    const clear = CreateSafe(DataIdentityMock, 5000, ["1000000"], true);
     clear();
     await vi.advanceTimersToNextTimerAsync();
     expect(DataIdentityMock).toBeCalledTimes(0);
   });
   it("the callable is executed fully if the clear function is called after the timeout", async () => {
-    const clear = CreateSafeInterval(DataIdentityMock, 5000, ["1000000"]);
+    const clear = CreateSafe(DataIdentityMock, 5000, ["1000000"], true);
     await vi.advanceTimersByTimeAsync(5000);
     clear();
     expect(DataIdentityMock).toBeCalledTimes(1);
@@ -66,7 +61,7 @@ describe("testing CreateSafeInterval with synchronous function with single argum
     expect(DataIdentityMock).toReturnWith("1000000");
   });
   it("the callable is executed twice if the clear function is called after 2 timeouts passed, meaning the clear stops the interval after 2 ticks", async () => {
-    const clear = CreateSafeInterval(DataIdentityMock, 5000, []);
+    const clear = CreateSafe(DataIdentityMock, 5000, [], true);
     await vi.advanceTimersByTimeAsync(10000);
     clear();
     await vi.advanceTimersByTimeAsync(1000000); // no more timers should be called
@@ -88,50 +83,25 @@ const AsyncDataIdentity = async (
   });
 };
 const AsyncDataIdentityMock = vi.fn(AsyncDataIdentity);
-const ResolveRandomly = async (randMS: number) => {
+const ResolveInMS = async (ms: number) => {
   return new Promise<number>((res) => {
     setTimeout(() => {
-      res(randMS);
-    }, randMS);
+      res(ms);
+    }, ms);
   });
 };
-const ResolveRandomlyMock = vi.fn(ResolveRandomly);
+const ResolveInMSMock = vi.fn(ResolveInMS);
 
 const expectedRandomMSArray: number[] = [];
 const actualRandomMSArray: number[] = [];
-const ResolveRandomlySingleIntervalMock = vi.fn(async () => {
-  const randMS = (Math.random() * 10 + 2) * 1000;
-  expectedRandomMSArray.push(randMS);
-  const result = await ResolveRandomly(randMS);
+const ResolveRandomly = vi.fn(async () => {
+  const ms = (Math.random() * 10 + 2) * 1000;
+  expectedRandomMSArray.push(ms);
+  const result = await ResolveInMS(ms);
   actualRandomMSArray.push(result);
 });
 
-/**
- * Passes a single tick (timeout) and waits for the promise to be resolved.
- * The promise is awaited with the advanceTimersToNextTimerAsync function.
- * This is because the promise is constructed to be resolved after the timeout.
- * @param tickTimeout the timeout in milliseconds
- */
-const PassTickAndWaitForResolve = async (tickTimeout: number) => {
-  await vi.advanceTimersByTimeAsync(tickTimeout); // pass the tick
-  await vi.advanceTimersToNextTimerAsync(); // make sure the promise is resolved
-};
-/**
- * Passes a specified number of ticks (timeouts) and waits for the promises to be resolved.
- * The promises are awaited with the advanceTimersToNextTimerAsync function.
- * This is because the promises are constructed to be resolved after the timeout.
- * @param ticks the number of ticks to pass
- * @param tickTimeout the timeout in milliseconds
- */
-const PassTicksAndWaitForResolves = async (
-  ticks: number,
-  tickTimeout: number,
-) => {
-  for (let i = 0; i < ticks; i++) {
-    await PassTickAndWaitForResolve(tickTimeout);
-  }
-};
-describe("testing CreateSafeInterval with asynchronous function with single argument", () => {
+describe("testing CreateSafe as interval with asynchronous function with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -143,12 +113,12 @@ describe("testing CreateSafeInterval with asynchronous function with single argu
       // the callable should be called once with the expected data
       // only one interval for the same callable
       // even with different inputs and timeout
-      CreateSafeInterval(AsyncDataIdentityMock, 0, ["1"]);
-      CreateSafeInterval(AsyncDataIdentityMock, 100000, ["2"]);
-      CreateSafeInterval(AsyncDataIdentityMock, 0, ["3"]);
-      CreateSafeInterval(AsyncDataIdentityMock, 3, ["4"]);
-      const clear = CreateSafeInterval(AsyncDataIdentityMock, 2000, args);
-      await PassTickAndWaitForResolve(2000);
+      CreateSafe(AsyncDataIdentityMock, 0, ["1"], true);
+      CreateSafe(AsyncDataIdentityMock, 100000, ["2"], true);
+      CreateSafe(AsyncDataIdentityMock, 0, ["3"], true);
+      CreateSafe(AsyncDataIdentityMock, 3, ["4"], true);
+      const clear = CreateSafe(AsyncDataIdentityMock, 2000, args, true);
+      await vi.advanceTimersByTimeAsync(3000);
       clear();
       expect(AsyncDataIdentityMock).toBeCalledTimes(1);
       expect(AsyncDataIdentityMock).toBeCalledWith(...args);
@@ -159,72 +129,67 @@ describe("testing CreateSafeInterval with asynchronous function with single argu
   }
 
   it("interval stops and no callable is executed if the clear function is called before the timeout", async () => {
-    const clear = CreateSafeInterval(AsyncDataIdentityMock, 5000, ["1000000"]);
+    const clear = CreateSafe(AsyncDataIdentityMock, 5000, ["1000000"], true);
     clear();
     await vi.advanceTimersByTimeAsync(1000000);
     expect(AsyncDataIdentityMock).toBeCalledTimes(0);
   });
   it("the callable is executed fully if the clear function is called after the timeout", async () => {
-    const clear = CreateSafeInterval(AsyncDataIdentityMock, 5000, ["1000000"]);
-    await PassTickAndWaitForResolve(5000);
+    const clear = CreateSafe(AsyncDataIdentityMock, 5000, ["1000000"], true);
+    await vi.advanceTimersByTimeAsync(6000);
     clear();
     expect(AsyncDataIdentityMock).toBeCalledTimes(1);
     expect(AsyncDataIdentityMock).toBeCalledWith("1000000");
   });
   it("the callable is executed twice if the clear function is called after 2 timeouts passed, meaning the clear stops the interval after 2 ticks", async () => {
-    const clear = CreateSafeInterval(
-      ResolveRandomlySingleIntervalMock,
-      5000,
-      [],
-    );
-    await PassTicksAndWaitForResolves(2, 5000);
-    expect(ResolveRandomlySingleIntervalMock).toBeCalledTimes(2);
+    const clear = CreateSafe(ResolveRandomly, 5000, [], true);
+    await vi.advanceTimersByTimeAsync(10000); // add 2 wrapped callables into the queue
     clear(); // remove the interval now
-    await vi.advanceTimersByTimeAsync(1000000); // no more timers should be called
-    expect(ResolveRandomlySingleIntervalMock).toBeCalledTimes(2);
-    expect(ResolveRandomlySingleIntervalMock).toHaveResolvedTimes(2);
+    await vi.advanceTimersByTimeAsync(1000000); // resolve the callables and wait more
+    expect(ResolveRandomly).toBeCalledTimes(2);
+    expect(ResolveRandomly).toHaveResolvedTimes(2);
   });
   it("no async results mix or overlap if trying to create multiple intervals", async () => {
     // check sequential operations
     for (let i = 0; i < 10; i++) {
-      const randMS = (Math.random() * 10 + 2) * 1000;
-      const clear = CreateSafeInterval(ResolveRandomlyMock, 1000, [randMS]);
-      await PassTickAndWaitForResolve(1000);
-      expect(ResolveRandomlyMock).toBeCalledTimes(1);
-      expect(ResolveRandomlyMock).toHaveBeenCalledWith(randMS);
-      expect(ResolveRandomlyMock).toHaveResolvedWith(randMS);
-      ResolveRandomlyMock.mockClear();
-      clear();
+      const ms = (Math.random() * 10 + 2) * 1000;
+      const clear = CreateSafe(ResolveInMSMock, 1000, [ms], true);
+      await vi.advanceTimersByTimeAsync(1000); // add to the queue
+      clear(); // remove the interval here
+      await vi.advanceTimersByTimeAsync(ms); // wait for the resolve
+      expect(ResolveInMSMock).toBeCalledTimes(1);
+      expect(ResolveInMSMock).toHaveBeenCalledWith(ms);
+      expect(ResolveInMSMock).toHaveResolvedWith(ms);
+      ResolveInMSMock.mockClear();
     }
     // check rewrite operations
-    let lastRandMS = 0;
+    let lastms = 0;
     let clear = undefined;
     for (let i = 0; i < 10; i++) {
-      const randMS = (Math.random() * 10 + 2) * 1000;
-      clear = CreateSafeInterval(ResolveRandomlyMock, 1000, [randMS]);
-      lastRandMS = randMS;
+      const ms = (Math.random() * 10 + 2) * 1000;
+      clear = CreateSafe(ResolveInMSMock, 1000, [ms], true);
+      lastms = ms;
     }
-    await PassTicksAndWaitForResolves(10, 1000);
-    expect(ResolveRandomlyMock).toBeCalledTimes(10);
-    expect(ResolveRandomlyMock).toHaveBeenNthCalledWith(10, lastRandMS);
-    expect(ResolveRandomlyMock).toHaveResolvedTimes(10);
-    expect(ResolveRandomlyMock).toHaveNthResolvedWith(10, lastRandMS);
+    await vi.advanceTimersByTimeAsync(10000); // add 10 wrapped callables into the queue
+    clear(); // remove the interval now
+    await vi.advanceTimersByTimeAsync(1000000); // resolve the callables and wait more
+    expect(ResolveInMSMock).toBeCalledTimes(10);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(10, lastms);
+    expect(ResolveInMSMock).toHaveResolvedTimes(10);
+    expect(ResolveInMSMock).toHaveNthResolvedWith(10, lastms);
     clear();
   });
   it("no async results mix or overlap inside single interval even if the async operation takes longer than the specified timeout", async () => {
-    const clear = CreateSafeInterval(
-      ResolveRandomlySingleIntervalMock,
-      1000,
-      [],
-    );
-    await PassTicksAndWaitForResolves(10, 1000);
+    const clear = CreateSafe(ResolveRandomly, 1000, [], true);
+    await vi.advanceTimersByTimeAsync(10000); // add 10 wrapped callables into the queue
     clear();
-    expect(ResolveRandomlySingleIntervalMock).toBeCalledTimes(10);
+    await vi.advanceTimersByTimeAsync(1000000); // resolve the callables and wait more
+    expect(ResolveRandomly).toBeCalledTimes(10);
     expect(expectedRandomMSArray).toEqual(actualRandomMSArray);
   });
 });
 
-describe("testing CreateSafeTimeout with synchronous function with single argument", () => {
+describe("testing CreateSafe as timeout with synchronous function with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -236,11 +201,11 @@ describe("testing CreateSafeTimeout with synchronous function with single argume
       // the callable should be called once with the expected data
       // only one timeout for the same callable
       // even with different inputs and timeout
-      CreateSafeTimeout(DataIdentityMock, 0, ["1"]);
-      CreateSafeTimeout(DataIdentityMock, 100000, ["2"]);
-      CreateSafeTimeout(DataIdentityMock, 0, ["3"]);
-      CreateSafeTimeout(DataIdentityMock, 3, ["4"]);
-      const clear = CreateSafeTimeout(DataIdentityMock, 2000, args);
+      CreateSafe(DataIdentityMock, 0, ["1"], false);
+      CreateSafe(DataIdentityMock, 100000, ["2"], false);
+      CreateSafe(DataIdentityMock, 0, ["3"], false);
+      CreateSafe(DataIdentityMock, 3, ["4"], false);
+      const clear = CreateSafe(DataIdentityMock, 2000, args, false);
       await vi.advanceTimersToNextTimerAsync();
       expect(DataIdentityMock).toBeCalledTimes(1);
       expect(DataIdentityMock).toBeCalledWith(...args);
@@ -252,13 +217,13 @@ describe("testing CreateSafeTimeout with synchronous function with single argume
   }
 
   it("timeout stops and no callable is executed if the clear function is called before the timeout", async () => {
-    const clear = CreateSafeTimeout(DataIdentityMock, 5000, ["1000000"]);
+    const clear = CreateSafe(DataIdentityMock, 5000, ["1000000"], false);
     clear();
     await vi.advanceTimersToNextTimerAsync();
     expect(DataIdentityMock).toBeCalledTimes(0);
   });
   it("the callable is executed fully if the clear function is called after the timeout", async () => {
-    const clear = CreateSafeTimeout(DataIdentityMock, 5000, ["1000000"]);
+    const clear = CreateSafe(DataIdentityMock, 5000, ["1000000"], false);
     await vi.advanceTimersToNextTimerAsync();
     expect(DataIdentityMock).toBeCalledTimes(1);
     expect(DataIdentityMock).toBeCalledWith("1000000");
@@ -267,7 +232,7 @@ describe("testing CreateSafeTimeout with synchronous function with single argume
   });
 });
 
-describe("testing CreateSafeTimeout with asynchronous function with single argument", () => {
+describe("testing CreateSafe as timeout with asynchronous function with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -279,11 +244,11 @@ describe("testing CreateSafeTimeout with asynchronous function with single argum
       // the callable should be called once with the expected data
       // only one timeout for the same callable
       // even with different inputs and timeout
-      CreateSafeTimeout(AsyncDataIdentityMock, 0, ["1"]);
-      CreateSafeTimeout(AsyncDataIdentityMock, 100000, ["2"]);
-      CreateSafeTimeout(AsyncDataIdentityMock, 0, ["3"]);
-      CreateSafeTimeout(AsyncDataIdentityMock, 3, ["4"]);
-      const clear = CreateSafeTimeout(AsyncDataIdentityMock, 2000, args);
+      CreateSafe(AsyncDataIdentityMock, 0, ["1"], false);
+      CreateSafe(AsyncDataIdentityMock, 100000, ["2"], false);
+      CreateSafe(AsyncDataIdentityMock, 0, ["3"], false);
+      CreateSafe(AsyncDataIdentityMock, 3, ["4"], false);
+      const clear = CreateSafe(AsyncDataIdentityMock, 2000, args, false);
       await vi.advanceTimersToNextTimerAsync();
       await vi.advanceTimersToNextTimerAsync(); // to make sure the promise is resolved
       expect(AsyncDataIdentityMock).toBeCalledTimes(1);
@@ -296,13 +261,13 @@ describe("testing CreateSafeTimeout with asynchronous function with single argum
   }
 
   it("timeout stops and no callable is executed if the clear function is called before the timeout", async () => {
-    const clear = CreateSafeTimeout(AsyncDataIdentityMock, 5000, ["1000000"]);
+    const clear = CreateSafe(AsyncDataIdentityMock, 5000, ["1000000"], false);
     clear();
     await vi.advanceTimersToNextTimerAsync();
     expect(AsyncDataIdentityMock).toBeCalledTimes(0);
   });
   it("the callable is executed fully if the clear function is called after the timeout", async () => {
-    const clear = CreateSafeTimeout(AsyncDataIdentityMock, 5000, ["1000000"]);
+    const clear = CreateSafe(AsyncDataIdentityMock, 5000, ["1000000"], false);
     await vi.advanceTimersToNextTimerAsync();
     await vi.advanceTimersToNextTimerAsync(); // to make sure the promise is resolved
     expect(AsyncDataIdentityMock).toBeCalledTimes(1);
@@ -312,41 +277,37 @@ describe("testing CreateSafeTimeout with asynchronous function with single argum
   it("no async results mix or overlap if trying to create multiple timeouts", async () => {
     const expectedResults: number[] = [];
     for (let i = 0; i < 10; i++) {
-      const randMS = (Math.random() * 10 + 2) * 1000;
-      expectedResults.push(randMS);
-      const clear = CreateSafeTimeout(ResolveRandomlyMock, 1000, [randMS]);
+      const ms = (Math.random() * 10 + 2) * 1000;
+      expectedResults.push(ms);
+      const clear = CreateSafe(ResolveInMSMock, 1000, [ms], false);
       await vi.advanceTimersByTimeAsync(1000); // to start the callable
       clear();
     }
 
     await vi.advanceTimersByTimeAsync(100000); // to make sure the promises are resolved
 
-    expect(ResolveRandomlyMock).toBeCalledTimes(10);
+    expect(ResolveInMSMock).toBeCalledTimes(10);
     expect(expectedResults).toEqual(
-      ResolveRandomlyMock.mock.settledResults.map((r) => r.value),
+      ResolveInMSMock.mock.settledResults.map((r) => r.value),
     );
   });
   it("no async results mix or overlap inside single timeout even if the async operation takes longer than the specified timeout", async () => {
     for (let i = 0; i < 10; i++) {
-      const clear = CreateSafeTimeout(
-        ResolveRandomlySingleIntervalMock,
-        1000,
-        [],
-      ); // here the timeout is created on every iteration since it is not an interval
+      const clear = CreateSafe(ResolveRandomly, 1000, [], false); // here the timeout is created on every iteration since it is not an interval
       await vi.advanceTimersByTimeAsync(1000); // to start the callable
       clear();
     }
 
     await vi.advanceTimersByTimeAsync(100000); // to make sure the promises are resolved
 
-    expect(ResolveRandomlySingleIntervalMock).toBeCalledTimes(10);
+    expect(ResolveRandomly).toBeCalledTimes(10);
     expect(expectedRandomMSArray).toEqual(actualRandomMSArray);
   });
 });
 
 // create safe interval multiple
 
-describe("testing CreateSafeIntervalMultiple with synchronous function with single argument", () => {
+describe("testing CreateSafeMultiple as interval with synchronous function with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -357,15 +318,22 @@ describe("testing CreateSafeIntervalMultiple with synchronous function with sing
     it("many intervals for the same callable", async () => {
       // the callable should be called inside any created interval with the expected data
       // even with the same inputs and timeout
-      const c1 = CreateSafeIntervalMultiple(DataIdentityMock, 1000, ["1"]);
-      const c2 = CreateSafeIntervalMultiple(DataIdentityMock, 1000, ["1"]);
-      const c3 = CreateSafeIntervalMultiple(DataIdentityMock, 3000, ["3"]);
-      const c4 = CreateSafeIntervalMultiple(DataIdentityMock, 4000, ["4"]);
-      const c5 = CreateSafeIntervalMultiple(DataIdentityMock, 5000, args); // this one checks the different arguments count
+      const c1 = CreateSafeMultiple(DataIdentityMock, 1000, ["1"], true);
+      const c2 = CreateSafeMultiple(DataIdentityMock, 1000, ["1"], true);
+      const c3 = CreateSafeMultiple(DataIdentityMock, 3000, ["3"], true);
+      const c4 = CreateSafeMultiple(DataIdentityMock, 4000, ["4"], true);
+      const c5 = CreateSafeMultiple(DataIdentityMock, 5000, args, true); // this one checks the different arguments count
       await vi.advanceTimersByTimeAsync(5000);
+      c1();
+      c2();
+      c3();
+      c4();
+      c5();
       expect(DataIdentityMock).toBeCalledTimes(13);
       const resultsArray = DataIdentityMock.mock.results.map((r) => r.value);
       expect(resultsArray).toEqual([
+        "1",
+        "1",
         "1",
         "1",
         "1",
@@ -377,24 +345,16 @@ describe("testing CreateSafeIntervalMultiple with synchronous function with sing
         "1",
         "1",
         args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
-
-        "1",
-        "1",
       ]);
-      c1();
-      c2();
-      c3();
-      c4();
-      c5();
     });
   }
 
   it("intervals stop and no callable is executed if the clear function is called before the timeout", async () => {
-    const c1 = CreateSafeIntervalMultiple(DataIdentityMock, 0, ["1"]);
-    const c2 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeIntervalMultiple(DataIdentityMock, 2, ["3"]);
-    const c4 = CreateSafeIntervalMultiple(DataIdentityMock, 3, ["4"]);
-    const c5 = CreateSafeIntervalMultiple(DataIdentityMock, 4, ["5"]);
+    const c1 = CreateSafeMultiple(DataIdentityMock, 0, ["1"], true);
+    const c2 = CreateSafeMultiple(DataIdentityMock, 1, ["1"], true);
+    const c3 = CreateSafeMultiple(DataIdentityMock, 2, ["3"], true);
+    const c4 = CreateSafeMultiple(DataIdentityMock, 3, ["4"], true);
+    const c5 = CreateSafeMultiple(DataIdentityMock, 4, ["5"], true);
     c1();
     c2();
     c3();
@@ -404,11 +364,11 @@ describe("testing CreateSafeIntervalMultiple with synchronous function with sing
     expect(DataIdentityMock).toBeCalledTimes(0);
   });
   it("the callable is executed fully if the clear function is called after 1 timeout", async () => {
-    const c1 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["1"]);
-    const c2 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["3"]);
-    const c4 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["4"]);
-    const c5 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["5"]);
+    const c1 = CreateSafeMultiple(DataIdentityMock, 1, ["1"], true);
+    const c2 = CreateSafeMultiple(DataIdentityMock, 1, ["1"], true);
+    const c3 = CreateSafeMultiple(DataIdentityMock, 1, ["3"], true);
+    const c4 = CreateSafeMultiple(DataIdentityMock, 1, ["4"], true);
+    const c5 = CreateSafeMultiple(DataIdentityMock, 1, ["5"], true);
     await vi.advanceTimersByTimeAsync(1);
     c1();
     c2();
@@ -420,11 +380,11 @@ describe("testing CreateSafeIntervalMultiple with synchronous function with sing
     expect(resultsArray).toEqual(["1", "1", "3", "4", "5"]);
   });
   it("the callable is executed twice in each interval if the clear function is called after 2 timeouts passed, meaning the clear stops the interval after 2 ticks", async () => {
-    const c1 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["1"]);
-    const c2 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["3"]);
-    const c4 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["4"]);
-    const c5 = CreateSafeIntervalMultiple(DataIdentityMock, 1, ["5"]);
+    const c1 = CreateSafeMultiple(DataIdentityMock, 1, ["1"], true);
+    const c2 = CreateSafeMultiple(DataIdentityMock, 1, ["1"], true);
+    const c3 = CreateSafeMultiple(DataIdentityMock, 1, ["3"], true);
+    const c4 = CreateSafeMultiple(DataIdentityMock, 1, ["4"], true);
+    const c5 = CreateSafeMultiple(DataIdentityMock, 1, ["5"], true);
     await vi.advanceTimersByTimeAsync(2);
     c1();
     c2();
@@ -449,7 +409,7 @@ describe("testing CreateSafeIntervalMultiple with synchronous function with sing
   });
 });
 
-describe("testing CreateSafeIntervalMultiple with asynchronous function with single argument", () => {
+describe("testing CreateSafeMultiple as interval with asynchronous function with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -460,28 +420,33 @@ describe("testing CreateSafeIntervalMultiple with asynchronous function with sin
     it("many intervals for the same callable", async () => {
       // the callable should be called inside any created interval with the expected data
       // even with the same inputs and timeout
-      const c1 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 1000, ["1"]); // these register 3 callbacks during 5 seconds and the last cb resolves because we wait for it in the PassTickAndWaitForResolve later
-      const c2 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 1000, ["1"]);
-      const c3 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 3000, ["3"]);
-      const c4 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 4000, ["4"]);
-      const c5 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 5000, args);
-      await PassTickAndWaitForResolve(5000);
+      const c1 = CreateSafeMultiple(AsyncDataIdentityMock, 1000, ["1"], true); // these register 3 callbacks during 5 seconds and the last cb resolves because we wait for it in the PassTickAndWaitForResolve later
+      const c2 = CreateSafeMultiple(AsyncDataIdentityMock, 1000, ["1"], true);
+      const c3 = CreateSafeMultiple(AsyncDataIdentityMock, 3000, ["3"], true);
+      const c4 = CreateSafeMultiple(AsyncDataIdentityMock, 4000, ["4"], true);
+      const c5 = CreateSafeMultiple(AsyncDataIdentityMock, 5000, args, true);
+      await vi.advanceTimersByTimeAsync(5000);
       c1();
       c2();
       c3();
       c4();
       c5();
-      expect(AsyncDataIdentityMock).toBeCalledTimes(9);
+      expect(AsyncDataIdentityMock).toBeCalledTimes(13);
+      await vi.advanceTimersByTimeAsync(5000); // wait all promises resolve (any wait value will do)
       const resultsArray = AsyncDataIdentityMock.mock.settledResults.map(
         (r) => r.value,
       );
       expect(resultsArray).toEqual([
         "1",
         "1",
+        "1",
+        "1",
         "3",
         "1",
         "1",
         "4",
+        "1",
+        "1",
         args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
         "1",
         "1",
@@ -490,11 +455,11 @@ describe("testing CreateSafeIntervalMultiple with asynchronous function with sin
   }
 
   it("intervals stop and no callable is executed if the clear function is called before the timeout", async () => {
-    const c1 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 0, ["1"]);
-    const c2 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 2, ["3"]);
-    const c4 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 3, ["4"]);
-    const c5 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 4, ["5"]);
+    const c1 = CreateSafeMultiple(AsyncDataIdentityMock, 0, ["1"], true);
+    const c2 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["1"], true);
+    const c3 = CreateSafeMultiple(AsyncDataIdentityMock, 2, ["3"], true);
+    const c4 = CreateSafeMultiple(AsyncDataIdentityMock, 3, ["4"], true);
+    const c5 = CreateSafeMultiple(AsyncDataIdentityMock, 4, ["5"], true);
     c1();
     c2();
     c3();
@@ -504,17 +469,18 @@ describe("testing CreateSafeIntervalMultiple with asynchronous function with sin
     expect(AsyncDataIdentityMock).toBeCalledTimes(0);
   });
   it("the callable is executed fully if the clear function is called after the timeout", async () => {
-    const c1 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 1, ["1"]);
-    const c2 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 1, ["3"]);
-    const c4 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 1, ["4"]);
-    const c5 = CreateSafeIntervalMultiple(AsyncDataIdentityMock, 1, ["5"]);
-    await PassTickAndWaitForResolve(1);
+    const c1 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["1"], true);
+    const c2 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["1"], true);
+    const c3 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["3"], true);
+    const c4 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["4"], true);
+    const c5 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["5"], true);
+    await vi.advanceTimersByTimeAsync(1);
     c1();
     c2();
     c3();
     c4();
     c5();
+    await vi.advanceTimersByTimeAsync(50000);
     expect(AsyncDataIdentityMock).toBeCalledTimes(5);
     const resultsArray = AsyncDataIdentityMock.mock.settledResults.map(
       (r) => r.value,
@@ -525,39 +491,35 @@ describe("testing CreateSafeIntervalMultiple with asynchronous function with sin
   it("no async results mix or overlap inside single interval if trying to create multiple intervals", async () => {
     // check sequential operations
     for (let i = 0; i < 10; i++) {
-      const randMS = (Math.random() * 10 + 2) * 1000;
-      const clear = CreateSafeIntervalMultiple(ResolveRandomlyMock, 1000, [
-        randMS,
-      ]);
-      await PassTickAndWaitForResolve(1000);
-      expect(ResolveRandomlyMock).toBeCalledTimes(1);
-      expect(ResolveRandomlyMock).toHaveBeenCalledWith(randMS);
-      expect(ResolveRandomlyMock).toHaveResolvedWith(randMS);
-      ResolveRandomlyMock.mockClear();
+      const ms = (Math.random() * 10 + 2) * 1000;
+      const clear = CreateSafeMultiple(ResolveInMSMock, 1000, [ms], true);
+      await vi.advanceTimersByTimeAsync(1000);
       clear();
+      await vi.advanceTimersByTimeAsync(ms);
+      expect(ResolveInMSMock).toBeCalledTimes(1);
+      expect(ResolveInMSMock).toHaveBeenCalledWith(ms);
+      expect(ResolveInMSMock).toHaveResolvedWith(ms);
+      ResolveInMSMock.mockClear();
     }
   });
-  it("no async results mix or overlap inside each interval from CreateSafeIntervalMultiple even if the async operation takes longer than the specified timeout", async () => {
+  it("no async results mix or overlap inside each interval from CreateSafeMultiple even if the async operation takes longer than the specified timeout", async () => {
     for (let i = 0; i < 10; i++) {
-      const clear = CreateSafeIntervalMultiple(
-        ResolveRandomlySingleIntervalMock,
-        1000,
-        [],
-      );
-      await PassTicksAndWaitForResolves(10, 1000);
+      const clear = CreateSafeMultiple(ResolveRandomly, 1000, [], true);
+      await vi.advanceTimersByTimeAsync(1000);
       clear();
-      expect(ResolveRandomlySingleIntervalMock).toBeCalledTimes(10);
+      await vi.advanceTimersByTimeAsync(100000);
+      expect(ResolveRandomly).toBeCalledTimes(1);
       expect(expectedRandomMSArray).toEqual(actualRandomMSArray);
-      ResolveRandomlySingleIntervalMock.mockClear();
+      ResolveRandomly.mockClear();
       actualRandomMSArray.length = 0;
       expectedRandomMSArray.length = 0;
     }
   });
 });
 
-// createSafeTimeoutMultiple
+// CreateSafeMultiple
 
-describe("testing CreateSafeTimeoutMultiple with synchronous function with single argument", () => {
+describe("testing CreateSafeMultiple as timeout with synchronous function with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -568,11 +530,11 @@ describe("testing CreateSafeTimeoutMultiple with synchronous function with singl
     it("many timeouts for the same callable", async () => {
       // the callable should be called once for each timeout with the expected data
       // even with the same inputs and timeout
-      const c1 = CreateSafeTimeoutMultiple(DataIdentityMock, 1000, ["1"]);
-      const c2 = CreateSafeTimeoutMultiple(DataIdentityMock, 1000, ["1"]);
-      const c3 = CreateSafeTimeoutMultiple(DataIdentityMock, 3000, ["3"]);
-      const c4 = CreateSafeTimeoutMultiple(DataIdentityMock, 4000, ["4"]);
-      const c5 = CreateSafeTimeoutMultiple(DataIdentityMock, 5000, args);
+      const c1 = CreateSafeMultiple(DataIdentityMock, 1000, ["1"], false);
+      const c2 = CreateSafeMultiple(DataIdentityMock, 1000, ["1"], false);
+      const c3 = CreateSafeMultiple(DataIdentityMock, 3000, ["3"], false);
+      const c4 = CreateSafeMultiple(DataIdentityMock, 4000, ["4"], false);
+      const c5 = CreateSafeMultiple(DataIdentityMock, 5000, args, false);
       await vi.advanceTimersByTimeAsync(5000);
       c1();
       c2();
@@ -592,11 +554,11 @@ describe("testing CreateSafeTimeoutMultiple with synchronous function with singl
   }
 
   it("timeouts stop and no callable is executed if the clear function is called before the timeout", async () => {
-    const c1 = CreateSafeTimeoutMultiple(DataIdentityMock, 0, ["1"]);
-    const c2 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeTimeoutMultiple(DataIdentityMock, 2, ["3"]);
-    const c4 = CreateSafeTimeoutMultiple(DataIdentityMock, 3, ["4"]);
-    const c5 = CreateSafeTimeoutMultiple(DataIdentityMock, 4, ["5"]);
+    const c1 = CreateSafeMultiple(DataIdentityMock, 0, ["1"], false);
+    const c2 = CreateSafeMultiple(DataIdentityMock, 1, ["1"], false);
+    const c3 = CreateSafeMultiple(DataIdentityMock, 2, ["3"], false);
+    const c4 = CreateSafeMultiple(DataIdentityMock, 3, ["4"], false);
+    const c5 = CreateSafeMultiple(DataIdentityMock, 4, ["5"], false);
     c1();
     c2();
     c3();
@@ -606,11 +568,11 @@ describe("testing CreateSafeTimeoutMultiple with synchronous function with singl
     expect(DataIdentityMock).toBeCalledTimes(0);
   });
   it("the callable is executed fully if the clear function is called after the timeout and the timeout stops", async () => {
-    const c1 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
-    const c2 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["3"]);
-    const c4 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["4"]);
-    const c5 = CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["5"]);
+    const c1 = CreateSafeMultiple(DataIdentityMock, 1, ["1"], false);
+    const c2 = CreateSafeMultiple(DataIdentityMock, 1, ["1"], false);
+    const c3 = CreateSafeMultiple(DataIdentityMock, 1, ["3"], false);
+    const c4 = CreateSafeMultiple(DataIdentityMock, 1, ["4"], false);
+    const c5 = CreateSafeMultiple(DataIdentityMock, 1, ["5"], false);
     await vi.advanceTimersByTimeAsync(1);
     c1();
     c2();
@@ -623,11 +585,11 @@ describe("testing CreateSafeTimeoutMultiple with synchronous function with singl
     expect(resultsArray).toEqual(["1", "1", "3", "4", "5"]);
   });
   it("the callable is executed fully if the clear function is not called at all and the timeout stops", async () => {
-    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
-    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["1"]);
-    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["3"]);
-    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["4"]);
-    CreateSafeTimeoutMultiple(DataIdentityMock, 1, ["5"]);
+    CreateSafeMultiple(DataIdentityMock, 1, ["1"], false);
+    CreateSafeMultiple(DataIdentityMock, 1, ["1"], false);
+    CreateSafeMultiple(DataIdentityMock, 1, ["3"], false);
+    CreateSafeMultiple(DataIdentityMock, 1, ["4"], false);
+    CreateSafeMultiple(DataIdentityMock, 1, ["5"], false);
     await vi.advanceTimersByTimeAsync(50000);
     expect(DataIdentityMock).toBeCalledTimes(5);
     const resultsArray = DataIdentityMock.mock.results.map((r) => r.value);
@@ -635,7 +597,7 @@ describe("testing CreateSafeTimeoutMultiple with synchronous function with singl
   });
 });
 
-describe("testing CreateSafeTimeoutMultiple with asynchronous function with single argument", () => {
+describe("testing CreateSafeMultiple as timeout with asynchronous function with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -646,12 +608,12 @@ describe("testing CreateSafeTimeoutMultiple with asynchronous function with sing
     it("many timeouts for the same callable", async () => {
       // the callable should be called inside any created interval with the expected data
       // even with the same inputs and timeout
-      const c1 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1000, ["1"]);
-      const c2 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1000, ["1"]);
-      const c3 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 3000, ["3"]);
-      const c4 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 4000, ["4"]);
-      const c5 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 5000, args);
-      await PassTickAndWaitForResolve(5000);
+      const c1 = CreateSafeMultiple(AsyncDataIdentityMock, 1000, ["1"], false);
+      const c2 = CreateSafeMultiple(AsyncDataIdentityMock, 1000, ["1"], false);
+      const c3 = CreateSafeMultiple(AsyncDataIdentityMock, 3000, ["3"], false);
+      const c4 = CreateSafeMultiple(AsyncDataIdentityMock, 4000, ["4"], false);
+      const c5 = CreateSafeMultiple(AsyncDataIdentityMock, 5000, args, false);
+      await vi.advanceTimersByTimeAsync(6000);
       c1();
       c2();
       c3();
@@ -672,11 +634,11 @@ describe("testing CreateSafeTimeoutMultiple with asynchronous function with sing
   }
 
   it("timeouts stop and no callable is executed if the clear function is called before the timeout", async () => {
-    const c1 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 0, ["1"]);
-    const c2 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 2, ["3"]);
-    const c4 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 3, ["4"]);
-    const c5 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 4, ["5"]);
+    const c1 = CreateSafeMultiple(AsyncDataIdentityMock, 0, ["1"], false);
+    const c2 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["1"], false);
+    const c3 = CreateSafeMultiple(AsyncDataIdentityMock, 2, ["3"], false);
+    const c4 = CreateSafeMultiple(AsyncDataIdentityMock, 3, ["4"], false);
+    const c5 = CreateSafeMultiple(AsyncDataIdentityMock, 4, ["5"], false);
     c1();
     c2();
     c3();
@@ -686,12 +648,12 @@ describe("testing CreateSafeTimeoutMultiple with asynchronous function with sing
     expect(AsyncDataIdentityMock).toBeCalledTimes(0);
   });
   it("the callable is executed fully if the clear function is called after the timeout and the timeout stops", async () => {
-    const c1 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
-    const c2 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
-    const c3 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["3"]);
-    const c4 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["4"]);
-    const c5 = CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["5"]);
-    await PassTickAndWaitForResolve(1);
+    const c1 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["1"], false);
+    const c2 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["1"], false);
+    const c3 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["3"], false);
+    const c4 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["4"], false);
+    const c5 = CreateSafeMultiple(AsyncDataIdentityMock, 1, ["5"], false);
+    await vi.advanceTimersByTimeAsync(1);
     c1();
     c2();
     c3();
@@ -706,11 +668,11 @@ describe("testing CreateSafeTimeoutMultiple with asynchronous function with sing
   });
 
   it("the callable is executed fully if the clear function is not called at all and the timeout stops", async () => {
-    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
-    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["1"]);
-    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["3"]);
-    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["4"]);
-    CreateSafeTimeoutMultiple(AsyncDataIdentityMock, 1, ["5"]);
+    CreateSafeMultiple(AsyncDataIdentityMock, 1, ["1"], false);
+    CreateSafeMultiple(AsyncDataIdentityMock, 1, ["1"], false);
+    CreateSafeMultiple(AsyncDataIdentityMock, 1, ["3"], false);
+    CreateSafeMultiple(AsyncDataIdentityMock, 1, ["4"], false);
+    CreateSafeMultiple(AsyncDataIdentityMock, 1, ["5"], false);
     await vi.advanceTimersByTimeAsync(50000);
     expect(AsyncDataIdentityMock).toBeCalledTimes(5);
     const resultsArray = AsyncDataIdentityMock.mock.settledResults.map(
@@ -720,7 +682,7 @@ describe("testing CreateSafeTimeoutMultiple with asynchronous function with sing
   });
 });
 
-describe("testing CreateSafeInterval with synchronous function with single argument the function is added after the timeout passes", () => {
+describe("testing CreateSafe as interval with synchronous function with single argument the function is added after the timeout passes", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -731,18 +693,18 @@ describe("testing CreateSafeInterval with synchronous function with single argum
     // the callable should be called two times with different data
     // the first one is when the first timeout passes
     // the second one and over is from the second timeout pass
-    CreateSafeInterval(DataIdentityMock, 0, ["1"]);
-    CreateSafeInterval(DataIdentityMock, 100000, ["2"]);
-    CreateSafeInterval(DataIdentityMock, 0, ["3"]);
-    CreateSafeInterval(DataIdentityMock, 3, ["4"]);
-    CreateSafeInterval(DataIdentityMock, 2000, ["5"]);
+    CreateSafe(DataIdentityMock, 0, ["1"], true);
+    CreateSafe(DataIdentityMock, 100000, ["2"], true);
+    CreateSafe(DataIdentityMock, 0, ["3"], true);
+    CreateSafe(DataIdentityMock, 3, ["4"], true);
+    CreateSafe(DataIdentityMock, 2000, ["5"], true);
     await vi.advanceTimersToNextTimerAsync(); // the first timeout should call the callable with 5
     expect(DataIdentityMock).toBeCalledTimes(1);
     expect(DataIdentityMock).toBeCalledWith("5");
     expect(DataIdentityMock).toReturnWith("5");
-    CreateSafeInterval(DataIdentityMock, 0, ["5"]);
-    CreateSafeInterval(DataIdentityMock, 0, ["1000"]);
-    const clear = CreateSafeInterval(DataIdentityMock, 3000, ["10"]); // then the callable is registered with new data and interval
+    CreateSafe(DataIdentityMock, 0, ["5"], true);
+    CreateSafe(DataIdentityMock, 0, ["1000"], true);
+    const clear = CreateSafe(DataIdentityMock, 3000, ["10"], true); // then the callable is registered with new data and interval
     await vi.advanceTimersByTimeAsync(10000); // here only 3 additional calls should be made and with 10 this time
     expect(DataIdentityMock).toBeCalledTimes(4);
     const resultsArray = DataIdentityMock.mock.results.map((r) => r.value);
@@ -751,7 +713,7 @@ describe("testing CreateSafeInterval with synchronous function with single argum
   });
 });
 
-describe("testing CreateSafeTimeout with synchronous function with single argument when the same callable is added after the timeout", () => {
+describe("testing CreateSafe as timeout with synchronous function with single argument when the same callable is added after the timeout", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -759,18 +721,18 @@ describe("testing CreateSafeTimeout with synchronous function with single argume
     vi.clearAllMocks();
   });
   it("only one timeout for the same callable and new timeout for it after the timeout", async () => {
-    CreateSafeTimeout(DataIdentityMock, 0, ["1"]);
-    CreateSafeTimeout(DataIdentityMock, 100000, ["2"]);
-    CreateSafeTimeout(DataIdentityMock, 0, ["3"]);
-    CreateSafeTimeout(DataIdentityMock, 3, ["4"]);
-    CreateSafeTimeout(DataIdentityMock, 2000, ["5"]);
+    CreateSafe(DataIdentityMock, 0, ["1"], false);
+    CreateSafe(DataIdentityMock, 100000, ["2"], false);
+    CreateSafe(DataIdentityMock, 0, ["3"], false);
+    CreateSafe(DataIdentityMock, 3, ["4"], false);
+    CreateSafe(DataIdentityMock, 2000, ["5"], false);
     await vi.advanceTimersToNextTimerAsync();
     expect(DataIdentityMock).toBeCalledTimes(1);
     expect(DataIdentityMock).toBeCalledWith("5");
     expect(DataIdentityMock).toReturnWith("5");
-    CreateSafeTimeout(DataIdentityMock, 0, ["5"]);
-    CreateSafeTimeout(DataIdentityMock, 0, ["1000"]);
-    const clear = CreateSafeTimeout(DataIdentityMock, 3000, ["10"]);
+    CreateSafe(DataIdentityMock, 0, ["5"], false);
+    CreateSafe(DataIdentityMock, 0, ["1000"], false);
+    const clear = CreateSafe(DataIdentityMock, 3000, ["10"], false);
     await vi.advanceTimersByTimeAsync(10000);
     expect(DataIdentityMock).toBeCalledTimes(2);
     const resultsArray = DataIdentityMock.mock.results.map((r) => r.value);
@@ -793,7 +755,7 @@ const DataIdentity2 = (
 
 const DataIdentity2Mock = vi.fn(DataIdentity2);
 
-describe("testing CreateSafeInterval with different functions with single argument", () => {
+describe("testing CreateSafe as interval with different functions with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -803,17 +765,17 @@ describe("testing CreateSafeInterval with different functions with single argume
 
   for (const args of Arguments) {
     it("two different intervals for different callables", async () => {
-      CreateSafeInterval(DataIdentityMock, 0, ["1"]);
-      CreateSafeInterval(DataIdentityMock, 100000, ["2"]);
-      CreateSafeInterval(DataIdentityMock, 0, ["3"]);
-      CreateSafeInterval(DataIdentityMock, 3, ["4"]);
-      const clear = CreateSafeInterval(DataIdentityMock, 2000, args);
+      CreateSafe(DataIdentityMock, 0, ["1"], true);
+      CreateSafe(DataIdentityMock, 100000, ["2"], true);
+      CreateSafe(DataIdentityMock, 0, ["3"], true);
+      CreateSafe(DataIdentityMock, 3, ["4"], true);
+      const clear = CreateSafe(DataIdentityMock, 2000, args, true);
 
-      CreateSafeInterval(DataIdentity2Mock, 0, ["1"]);
-      CreateSafeInterval(DataIdentity2Mock, 100000, ["2"]);
-      CreateSafeInterval(DataIdentity2Mock, 0, ["3"]);
-      CreateSafeInterval(DataIdentity2Mock, 3, ["4"]);
-      const clear2 = CreateSafeInterval(DataIdentity2Mock, 2000, args);
+      CreateSafe(DataIdentity2Mock, 0, ["1"], true);
+      CreateSafe(DataIdentity2Mock, 100000, ["2"], true);
+      CreateSafe(DataIdentity2Mock, 0, ["3"], true);
+      CreateSafe(DataIdentity2Mock, 3, ["4"], true);
+      const clear2 = CreateSafe(DataIdentity2Mock, 2000, args, true);
 
       await vi.advanceTimersToNextTimerAsync();
 
@@ -838,7 +800,7 @@ describe("testing CreateSafeInterval with different functions with single argume
   }
 });
 
-describe("testing CreateSafeTimeout with different functions with single argument", () => {
+describe("testing CreateSafe as timeout with different functions with single argument", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -847,17 +809,17 @@ describe("testing CreateSafeTimeout with different functions with single argumen
   });
   for (const args of Arguments) {
     it("two different timeouts for different callables", async () => {
-      CreateSafeTimeout(DataIdentityMock, 0, ["1"]);
-      CreateSafeTimeout(DataIdentityMock, 100000, ["2"]);
-      CreateSafeTimeout(DataIdentityMock, 0, ["3"]);
-      CreateSafeTimeout(DataIdentityMock, 3, ["4"]);
-      const clear = CreateSafeTimeout(DataIdentityMock, 2000, args);
+      CreateSafe(DataIdentityMock, 0, ["1"], false);
+      CreateSafe(DataIdentityMock, 100000, ["2"], false);
+      CreateSafe(DataIdentityMock, 0, ["3"], false);
+      CreateSafe(DataIdentityMock, 3, ["4"], false);
+      const clear = CreateSafe(DataIdentityMock, 2000, args, false);
 
-      CreateSafeTimeout(DataIdentity2Mock, 0, ["1"]);
-      CreateSafeTimeout(DataIdentity2Mock, 100000, ["2"]);
-      CreateSafeTimeout(DataIdentity2Mock, 0, ["3"]);
-      CreateSafeTimeout(DataIdentity2Mock, 3, ["4"]);
-      const clear2 = CreateSafeTimeout(DataIdentity2Mock, 2000, args);
+      CreateSafe(DataIdentity2Mock, 0, ["1"], false);
+      CreateSafe(DataIdentity2Mock, 100000, ["2"], false);
+      CreateSafe(DataIdentity2Mock, 0, ["3"], false);
+      CreateSafe(DataIdentity2Mock, 3, ["4"], false);
+      const clear2 = CreateSafe(DataIdentity2Mock, 2000, args, false);
 
       await vi.advanceTimersToNextTimerAsync();
       expect(DataIdentityMock).toBeCalledTimes(1);
@@ -910,15 +872,17 @@ describe("testing callback usage", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
-  it("callback is called for each interval in createSafeInterval", async () => {
-    const clear = CreateSafeInterval(
+  it("callback is called for each interval in CreateSafe", async () => {
+    const clear = CreateSafe(
       ResolveAndReturnMock,
       1000,
       [],
+      true,
       CallbackMock,
     );
-    await PassTicksAndWaitForResolves(10, 1000);
+    await vi.advanceTimersByTimeAsync(10000); // add 10 wrapped callables to the queue
     clear();
+    await vi.advanceTimersByTimeAsync(10000); // wait till the last promise resolves
     // expect the mock to be called 10 times and be invoked with the same values as stored in the randNumArr
     expect(CallbackMock).toBeCalledTimes(10);
     CallbackMock.mock.calls.forEach((c, i) => {
@@ -928,15 +892,17 @@ describe("testing callback usage", () => {
     expect(resultsArray).toEqual(randNumArr);
     randNumArr.length = 0;
   });
-  it("callback is called for each interval in createSafeIntervalMultiple", async () => {
-    const clear = CreateSafeIntervalMultiple(
+  it("callback is called for each interval in CreateSafeMultiple", async () => {
+    const clear = CreateSafeMultiple(
       ResolveAndReturnMock,
       1000,
       [],
+      true,
       CallbackMock,
     );
-    await PassTicksAndWaitForResolves(10, 1000);
+    await vi.advanceTimersByTimeAsync(10000);
     clear();
+    await vi.advanceTimersByTimeAsync(1000);
     // expect the mock to be called 10 times and be invoked with the same values as stored in the randNumArr
     expect(CallbackMock).toBeCalledTimes(10);
     CallbackMock.mock.calls.forEach((c, i) => {
@@ -946,16 +912,18 @@ describe("testing callback usage", () => {
     expect(resultsArray).toEqual(randNumArr);
     randNumArr.length = 0;
   });
-  it("callback is called for each timeout in createSafeTimeout", async () => {
+  it("callback is called for each timeout in CreateSafe", async () => {
     for (let i = 0; i < 10; i++) {
-      const clear = CreateSafeTimeout(
+      const clear = CreateSafe(
         ResolveAndReturnMock,
         1000,
         [],
+        false,
         CallbackMock,
       );
-      await PassTickAndWaitForResolve(1000);
+      await vi.advanceTimersByTimeAsync(1000);
       clear();
+      await vi.advanceTimersByTimeAsync(1000);
     }
     // expect the mock to be called 10 times and be invoked with the same values as stored in the randNumArr
     expect(CallbackMock).toBeCalledTimes(10);
@@ -966,16 +934,18 @@ describe("testing callback usage", () => {
     expect(resultsArray).toEqual(randNumArr);
     randNumArr.length = 0;
   });
-  it("callback is called for each timeout in createSafeTimeoutMultiple", async () => {
+  it("callback is called for each timeout in CreateSafeMultiple", async () => {
     for (let i = 0; i < 10; i++) {
-      const clear = CreateSafeTimeoutMultiple(
+      const clear = CreateSafeMultiple(
         ResolveAndReturnMock,
         1000,
         [],
+        false,
         CallbackMock,
       );
-      await PassTickAndWaitForResolve(1000);
+      await vi.advanceTimersByTimeAsync(1000);
       clear();
+      await vi.advanceTimersByTimeAsync(1000);
     }
     // expect the mock to be called 10 times and be invoked with the same values as stored in the randNumArr
     expect(CallbackMock).toBeCalledTimes(10);
@@ -987,53 +957,57 @@ describe("testing callback usage", () => {
     randNumArr.length = 0;
   });
   it("callback is deregistered on new callback supply for SafeInterval", async () => {
-    CreateSafeInterval(ResolveAndReturnMock, 1000, [], CallbackMock);
-    const clear = CreateSafeInterval(
+    CreateSafe(ResolveAndReturnMock, 1000, [], true, CallbackMock);
+    const clear = CreateSafe(
       ResolveAndReturnMock,
       1000,
       [],
+      true,
       OtherCallbackMock,
     );
-    await PassTicksAndWaitForResolves(10, 1000);
+    await vi.advanceTimersByTimeAsync(10000);
     clear();
+    await vi.advanceTimersByTimeAsync(10000);
     // expect the CallbackMock not called and OtherCallbackMock called 10 times
     expect(CallbackMock).toBeCalledTimes(0);
     expect(OtherCallbackMock).toBeCalledTimes(10);
   });
   it("callback is deregistered on new callback supply for SafeTimeout", async () => {
-    CreateSafeTimeout(ResolveAndReturnMock, 1000, [], CallbackMock);
-    CreateSafeTimeout(ResolveAndReturnMock, 1000, [], OtherCallbackMock);
-    await PassTicksAndWaitForResolves(10, 1000);
+    CreateSafe(ResolveAndReturnMock, 1000, [], false, CallbackMock);
+    CreateSafe(ResolveAndReturnMock, 1000, [], false, OtherCallbackMock);
+    await vi.advanceTimersByTimeAsync(10000);
     // expect the CallbackMock not called and OtherCallbackMock called 1 time
     expect(CallbackMock).toBeCalledTimes(0);
     expect(OtherCallbackMock).toBeCalledTimes(1);
   });
   it("if the callable is pushed on the stack but the callback is deregistered => the new callback is called after the callable resolves in SafeInterval", async () => {
-    CreateSafeInterval(ResolveAndReturnMock, 1000, [], CallbackMock);
-    // wait till the callable is pushed on the stack
+    CreateSafe(ResolveAndReturnMock, 1000, [], true, CallbackMock);
+    // add the wrapped callable to the queue
     await vi.advanceTimersByTimeAsync(1000);
     // swap the callback
-    const clear = CreateSafeInterval(
+    const clear = CreateSafe(
       ResolveAndReturnMock,
       1000,
       [],
+      true,
       OtherCallbackMock,
     );
-    await vi.advanceTimersToNextTimerAsync(); // wait till the first callable resolves
     clear();
+    await vi.advanceTimersByTimeAsync(1000); // wait till the first callable resolves
     // expect the CallbackMock not called and OtherCallbackMock called 1 time
     expect(CallbackMock).toBeCalledTimes(0);
     expect(OtherCallbackMock).toBeCalledTimes(1);
   });
   it("if the callable is pushed on the stack but the callback is deregistered => the new callback is called after the callable resolves in SafeTimeout", async () => {
-    CreateSafeTimeout(ResolveAndReturnMock, 1000, [], CallbackMock);
+    CreateSafe(ResolveAndReturnMock, 1000, [], false, CallbackMock);
     // wait till the callable is pushed on the stack
     await vi.advanceTimersByTimeAsync(1000);
     // swap the callback
-    const clear = CreateSafeTimeout(
+    const clear = CreateSafe(
       ResolveAndReturnMock,
       1000,
       [],
+      false,
       OtherCallbackMock,
     );
     await vi.advanceTimersToNextTimerAsync(); // wait till the first callable resolves
@@ -1101,59 +1075,60 @@ describe("testing rejects and error throws", () => {
     vi.clearAllMocks();
   });
   it("error thrown in safe interval if caught in the callable then interval proceeds", async () => {
-    const clear = CreateSafeInterval(ErrorThrowMock, 1000, []);
+    const clear = CreateSafe(ErrorThrowMock, 1000, [], true);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(ErrorThrowMock).toBeCalledTimes(2);
   });
   it("error thrown in safe timeout if caught in the callable then timeout finishes successfully", async () => {
-    const clear = CreateSafeTimeout(ErrorThrowMock, 1000, []);
+    const clear = CreateSafe(ErrorThrowMock, 1000, [], false);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(ErrorThrowMock).toBeCalledTimes(1);
   });
   it("error thrown in safe interval multiple if caught in the callable then interval proceeds", async () => {
-    const clear = CreateSafeIntervalMultiple(ErrorThrowMock, 1000, []);
+    const clear = CreateSafeMultiple(ErrorThrowMock, 1000, [], true);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(ErrorThrowMock).toBeCalledTimes(2);
   });
   it("error thrown in safe timeout multiple if caught in the callable then timeout finishes successfully", async () => {
-    const clear = CreateSafeTimeoutMultiple(ErrorThrowMock, 1000, []);
+    const clear = CreateSafeMultiple(ErrorThrowMock, 1000, [], false);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(ErrorThrowMock).toBeCalledTimes(1);
   });
   it("reject in safe interval if caught in the callable then interval proceeds", async () => {
-    const clear = CreateSafeInterval(RejectMock, 1000, []);
+    const clear = CreateSafe(RejectMock, 1000, [], true);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(RejectMock).toBeCalledTimes(2);
   });
   it("reject in safe timeout if caught in the callable then timeout finishes successfully", async () => {
-    const clear = CreateSafeTimeout(RejectMock, 1000, []);
+    const clear = CreateSafe(RejectMock, 1000, [], false);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(RejectMock).toBeCalledTimes(1);
   });
   it("reject in safe interval multiple if caught in the callable then interval proceeds", async () => {
-    const clear = CreateSafeIntervalMultiple(RejectMock, 1000, []);
+    const clear = CreateSafeMultiple(RejectMock, 1000, [], true);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(RejectMock).toBeCalledTimes(2);
   });
   it("reject in safe timeout multiple if caught in the callable then timeout finishes successfully", async () => {
-    const clear = CreateSafeTimeoutMultiple(RejectMock, 1000, []);
+    const clear = CreateSafeMultiple(RejectMock, 1000, [], false);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(RejectMock).toBeCalledTimes(1);
   });
   // the throws and rejects are not resolved values so the callback function if any will be called with undefined instead of the resolved value
   it("error thrown in safe interval if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
-    const clear = CreateSafeInterval(
+    const clear = CreateSafe(
       ErrorThrowMock,
       1000,
       [],
+      true,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1162,10 +1137,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(undefined);
   });
   it("error thrown in safe timeout if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
-    const clear = CreateSafeTimeout(
+    const clear = CreateSafe(
       ErrorThrowMock,
       1000,
       [],
+      false,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1174,10 +1150,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(undefined);
   });
   it("error thrown in safe interval multiple if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
-    const clear = CreateSafeIntervalMultiple(
+    const clear = CreateSafeMultiple(
       ErrorThrowMock,
       1000,
       [],
+      true,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1186,10 +1163,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(undefined);
   });
   it("error thrown in safe timeout multiple if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
-    const clear = CreateSafeTimeoutMultiple(
+    const clear = CreateSafeMultiple(
       ErrorThrowMock,
       1000,
       [],
+      false,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1199,29 +1177,25 @@ describe("testing rejects and error throws", () => {
   });
   // the same for rejects
   it("reject in safe interval if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
-    const clear = CreateSafeInterval(
-      RejectMock,
-      1000,
-      [],
-      IdentityCallbackMock,
-    );
+    const clear = CreateSafe(RejectMock, 1000, [], true, IdentityCallbackMock);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(IdentityCallbackMock).toBeCalledTimes(2);
     expect(IdentityCallbackMock).toBeCalledWith(undefined);
   });
   it("reject in safe timeout if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
-    const clear = CreateSafeTimeout(RejectMock, 1000, [], IdentityCallbackMock);
+    const clear = CreateSafe(RejectMock, 1000, [], false, IdentityCallbackMock);
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(IdentityCallbackMock).toBeCalledTimes(1);
     expect(IdentityCallbackMock).toBeCalledWith(undefined);
   });
   it("reject in safe interval multiple if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
-    const clear = CreateSafeIntervalMultiple(
+    const clear = CreateSafeMultiple(
       RejectMock,
       1000,
       [],
+      true,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1230,10 +1204,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(undefined);
   });
   it("reject in safe timeout multiple if caught in the callable and the callable not returning any value after that then the callback should be called with undefined", async () => {
-    const clear = CreateSafeTimeoutMultiple(
+    const clear = CreateSafeMultiple(
       RejectMock,
       1000,
       [],
+      false,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1243,10 +1218,11 @@ describe("testing rejects and error throws", () => {
   });
   // if the callable handles an error and returns some value then this value should be passed to the callback if defined
   it("error thrown in safe interval if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
-    const clear = CreateSafeInterval(
+    const clear = CreateSafe(
       ErrorThrowWithReturnMock,
       1000,
       [],
+      true,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1255,10 +1231,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(1);
   });
   it("error thrown in safe timeout if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
-    const clear = CreateSafeTimeout(
+    const clear = CreateSafe(
       ErrorThrowWithReturnMock,
       1000,
       [],
+      false,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1267,10 +1244,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(1);
   });
   it("error thrown in safe interval multiple if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
-    const clear = CreateSafeIntervalMultiple(
+    const clear = CreateSafeMultiple(
       ErrorThrowWithReturnMock,
       1000,
       [],
+      true,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1279,10 +1257,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(1);
   });
   it("error thrown in safe timeout multiple if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
-    const clear = CreateSafeTimeoutMultiple(
+    const clear = CreateSafeMultiple(
       ErrorThrowWithReturnMock,
       1000,
       [],
+      false,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1292,10 +1271,11 @@ describe("testing rejects and error throws", () => {
   });
   // the same for rejects
   it("reject in safe interval if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
-    const clear = CreateSafeInterval(
+    const clear = CreateSafe(
       RejectWithReturnMock,
       1000,
       [],
+      true,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1304,10 +1284,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(1);
   });
   it("reject in safe timeout if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
-    const clear = CreateSafeTimeout(
+    const clear = CreateSafe(
       RejectWithReturnMock,
       1000,
       [],
+      false,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1316,10 +1297,11 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(1);
   });
   it("reject in safe interval multiple if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
-    const clear = CreateSafeIntervalMultiple(
+    const clear = CreateSafeMultiple(
       RejectWithReturnMock,
       1000,
       [],
+      true,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
@@ -1328,15 +1310,89 @@ describe("testing rejects and error throws", () => {
     expect(IdentityCallbackMock).toBeCalledWith(1);
   });
   it("reject in safe timeout multiple if caught in the callable and the callable returns a value then the callback should be called with that value", async () => {
-    const clear = CreateSafeTimeoutMultiple(
+    const clear = CreateSafeMultiple(
       RejectWithReturnMock,
       1000,
       [],
+      false,
       IdentityCallbackMock,
     );
     await vi.advanceTimersByTimeAsync(2000);
     clear();
     expect(IdentityCallbackMock).toBeCalledTimes(1);
     expect(IdentityCallbackMock).toBeCalledWith(1);
+  });
+});
+
+describe("testing no shuffle of results on callable set for execution and newly registered", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("on safe interval no shuffle", async () => {
+    CreateSafe(ResolveInMSMock, 1, [10000], true, IdentityCallbackMock);
+    await vi.advanceTimersByTimeAsync(1); // here the Mock should be in the queue
+    CreateSafe(ResolveInMSMock, 1, [1000], true, IdentityCallbackMock);
+    await vi.advanceTimersByTimeAsync(1); // here the next mock should be added to the queue too but not on the stack
+    const clear = CreateSafe(
+      ResolveInMSMock,
+      1,
+      [500],
+      true,
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(1); // the third is as the second one
+    clear();
+    expect(ResolveInMSMock).toBeCalledTimes(1); // only the first one should be on the stack by now
+    expect(IdentityCallbackMock).toBeCalledTimes(0); // no calls to the callback yet since the first one hasn't been resolved yet
+    await vi.advanceTimersByTime(2000); // no matter the time for the second and the third call passed the first one is not resolved so the second and the third ones should not be even on the stack yet
+    expect(ResolveInMSMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledTimes(0);
+    await vi.advanceTimersByTimeAsync(8000); // now the first one is resolved and the second one should be set on the stack
+    expect(ResolveInMSMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(10000);
+    await vi.advanceTimersByTimeAsync(1000); // now the second one is resolved and the third one should be set on the stack
+    expect(ResolveInMSMock).toBeCalledTimes(3);
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(1000);
+    await vi.advanceTimersByTimeAsync(500); // finally the third one is resolved
+    expect(ResolveInMSMock).toBeCalledTimes(3);
+    expect(IdentityCallbackMock).toBeCalledTimes(3);
+    expect(IdentityCallbackMock).toBeCalledWith(500);
+  });
+  it("on safe timeout no shuffle", async () => {
+    CreateSafe(ResolveInMSMock, 0, [10000], false, IdentityCallbackMock);
+    await vi.advanceTimersByTimeAsync(1); // here the Mock should be already on the stack but not resolved yet
+    CreateSafe(ResolveInMSMock, 0, [1000], false, IdentityCallbackMock);
+    await vi.advanceTimersByTimeAsync(1); // here the next mock should not be on the stack yet since the previous one is not resolved yet
+    const clear = CreateSafe(
+      ResolveInMSMock,
+      0,
+      [500],
+      false,
+      IdentityCallbackMock,
+    );
+    await vi.advanceTimersByTimeAsync(1); // here the next mock should not be on the stack yet since the previous one is not resolved yet
+    expect(ResolveInMSMock).toBeCalledTimes(1); // only the first one should be on the stack by now
+    expect(IdentityCallbackMock).toBeCalledTimes(0); // no calls to the callback yet since the first one hasn't been resolved yet
+    await vi.advanceTimersByTime(2000); // no matter the time for the second and the third call passed the first one is not resolved so the second and the third ones should not be even on the stack yet
+    expect(ResolveInMSMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledTimes(0);
+    await vi.advanceTimersByTimeAsync(8000); // now the first one is resolved and the second one should be set on the stack
+    expect(ResolveInMSMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledWith(10000);
+    await vi.advanceTimersByTimeAsync(1000); // now the second one is resolved and the third one should be set on the stack
+    expect(ResolveInMSMock).toBeCalledTimes(3);
+    expect(IdentityCallbackMock).toBeCalledTimes(2);
+    expect(IdentityCallbackMock).toBeCalledWith(1000);
+    await vi.advanceTimersByTimeAsync(500); // finally the third one is resolved
+    expect(ResolveInMSMock).toBeCalledTimes(3);
+    expect(IdentityCallbackMock).toBeCalledTimes(3);
+    expect(IdentityCallbackMock).toBeCalledWith(500);
+    clear();
   });
 });
