@@ -14,7 +14,7 @@ type Callback<T extends Callable> = (
   callableReturn: Awaited<ReturnType<T>>,
 ) => unknown;
 // a map of callable to its callback
-type FunctionToCallback = WeakMap<Callable, Callback<Callable>>;
+type FunctionToCallback = WeakMap<Callable, Callback<Callable> | undefined>;
 
 // type of the cache of all maps
 type Cache = {

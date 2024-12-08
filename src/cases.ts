@@ -4,195 +4,197 @@
 //   CreateSafeTimeout,
 // } from "./index.js";
 
-// /**
-//  * ACTUAL CASES WHICH DEMONSTRATE THE DIFFERENCES
-//  * BETWEEN SAFE INTERVAL AND STANDARD INTERVAL
-//  * AND SAFE TIMEOUT AND STANDARD TIMEOUT
-//  */
+import { CreateSafe } from "./index.js";
 
-// // REWRITE PROPERTY (SAFE INTERVAL AND TIMEOUT PROTECTS FROM REGISTERING THE SAME CALLABLE MULTIPLE TIMES EVEN WITH NO CLEAR CALL AND REWRITES ARGUMENTS AND TIMEOUT IF THEY CHANGE)
+/**
+ * ACTUAL CASES WHICH DEMONSTRATE THE DIFFERENCES
+ * BETWEEN SAFE INTERVAL AND STANDARD INTERVAL
+ * AND SAFE TIMEOUT AND STANDARD TIMEOUT
+ */
 
-// // synchronous functions
-// const LogMessage = (m: string) => console.log(m);
-// const LogMessage2 = (m: string) => console.log(m);
+// REWRITE PROPERTY (SAFE INTERVAL AND TIMEOUT PROTECTS FROM REGISTERING THE SAME CALLABLE MULTIPLE TIMES EVEN WITH NO CLEAR CALL AND REWRITES ARGUMENTS AND TIMEOUT IF THEY CHANGE)
 
-// // case with create safe interval and single synchronous function registered multiple times
-// CreateSafeInterval(LogMessage, 1000, ["1"]);
-// CreateSafeInterval(LogMessage, 1000, ["2"]);
-// CreateSafeInterval(LogMessage, 1000, ["3"]);
+// synchronous functions
+const LogMessage = (m: string) => console.log(m);
+const LogMessage2 = (m: string) => console.log(m);
 
-// // standard setInterval behavior, if not cleared all 3 calls will be executed:
-// setInterval(LogMessage, 1000, "1");
-// setInterval(LogMessage, 1000, "2");
-// setInterval(LogMessage, 1000, "3");
+// case with create safe interval and single synchronous function registered multiple times
+CreateSafe(LogMessage, 1000, ["1"], true);
+CreateSafe(LogMessage, 1000, ["2"], true);
+CreateSafe(LogMessage, 1000, ["3"], true);
 
-// // case with create safe interval and waiting for timeout with synchronous function
-// CreateSafeInterval(LogMessage, 1000, ["1"]);
-// setTimeout(() => CreateSafeInterval(LogMessage, 1000, ["2"]), 3000);
-// setTimeout(() => CreateSafeInterval(LogMessage, 1000, ["3"]), 5000);
+// standard setInterval behavior, if not cleared all 3 calls will be executed:
+setInterval(LogMessage, 1000, "1", true);
+setInterval(LogMessage, 1000, "2", true);
+setInterval(LogMessage, 1000, "3", true);
 
-// // standard setInterval behavior, if not cleared all 3 calls will be executed:
-// setInterval(LogMessage, 1000, "1");
-// setTimeout(() => setInterval(LogMessage, 1000, "2"), 3000);
-// setTimeout(() => setInterval(LogMessage, 1000, "3"), 5000);
+// case with create safe interval and waiting for timeout with synchronous function
+CreateSafe(LogMessage, 1000, ["1"], true);
+setTimeout(() => CreateSafe(LogMessage, 1000, ["2"], true), 3000);
+setTimeout(() => CreateSafe(LogMessage, 1000, ["3"], true), 5000);
 
-// // case with create safe interval and multiple synchronous functions
-// CreateSafeInterval(LogMessage, 1000, ["1"]);
-// CreateSafeInterval(LogMessage, 1000, ["2"]);
-// CreateSafeInterval(LogMessage, 1000, ["from lm1"]);
+// standard setInterval behavior, if not cleared all 3 calls will be executed:
+setInterval(LogMessage, 1000, "1");
+setTimeout(() => setInterval(LogMessage, 1000, "2"), 3000);
+setTimeout(() => setInterval(LogMessage, 1000, "3"), 5000);
 
-// CreateSafeInterval(LogMessage2, 1000, ["3"]);
-// CreateSafeInterval(LogMessage2, 1000, ["4"]);
-// CreateSafeInterval(LogMessage2, 1000, ["from lm2"]);
+// case with create safe interval and multiple synchronous functions (log message and log message 2 are different functions so both will be called separately)
+CreateSafe(LogMessage, 1000, ["1"], true);
+CreateSafe(LogMessage, 1000, ["2"], true);
+CreateSafe(LogMessage, 1000, ["from lm1"], true);
 
-// // standard setInterval behavior, if not cleared all 6 calls will be executed:
-// setInterval(LogMessage, 1000, "1");
-// setInterval(LogMessage, 1000, "2");
-// setInterval(LogMessage, 1000, "from lm1");
+CreateSafe(LogMessage2, 1000, ["3"], true);
+CreateSafe(LogMessage2, 1000, ["4"], true);
+CreateSafe(LogMessage2, 1000, ["from lm2"], true);
 
-// setInterval(LogMessage2, 1000, "3");
-// setInterval(LogMessage2, 1000, "4");
-// setInterval(LogMessage2, 1000, "from lm2");
+// standard setInterval behavior, if not cleared all 6 calls will be executed:
+setInterval(LogMessage, 1000, "1");
+setInterval(LogMessage, 1000, "2");
+setInterval(LogMessage, 1000, "from lm1");
 
-// // case with create safe timeout and single synchronous function registered multiple times
-// CreateSafeTimeout(LogMessage, 1000, ["1"]);
-// CreateSafeTimeout(LogMessage, 1000, ["2"]);
-// CreateSafeTimeout(LogMessage, 1000, ["3"]);
+setInterval(LogMessage2, 1000, "3");
+setInterval(LogMessage2, 1000, "4");
+setInterval(LogMessage2, 1000, "from lm2");
 
-// // standard setTimeout behavior, if not cleared all 3 calls will be executed:
-// setTimeout(LogMessage, 1000, "1");
-// setTimeout(LogMessage, 1000, "2");
-// setTimeout(LogMessage, 1000, "3");
+// case with create safe timeout and single synchronous function registered multiple times
+CreateSafe(LogMessage, 1000, ["1"], false);
+CreateSafe(LogMessage, 1000, ["2"], false);
+CreateSafe(LogMessage, 1000, ["3"], false);
 
-// // case with create safe timeout and waiting for timeout with synchronous function
-// CreateSafeTimeout(LogMessage, 1000, ["1"]);
-// setTimeout(() => CreateSafeTimeout(LogMessage, 1000, ["2"]), 3000);
-// setTimeout(() => CreateSafeTimeout(LogMessage, 1000, ["3"]), 5000);
+// standard setTimeout behavior, if not cleared all 3 calls will be executed:
+setTimeout(LogMessage, 1000, "1");
+setTimeout(LogMessage, 1000, "2");
+setTimeout(LogMessage, 1000, "3");
 
-// // here standard setTimeout works the same way
-// setTimeout(LogMessage, 1000, "1");
-// setTimeout(() => setTimeout(LogMessage, 1000, "2"), 3000);
-// setTimeout(() => setTimeout(LogMessage, 1000, "3"), 5000);
+// case with create safe timeout and waiting for timeout with synchronous function
+CreateSafe(LogMessage, 1000, ["1"], false);
+setTimeout(() => CreateSafe(LogMessage, 1000, ["2"], false), 3000);
+setTimeout(() => CreateSafe(LogMessage, 1000, ["3"], false), 5000);
 
-// // case with create safe timeout and multiple synchronous functions
-// CreateSafeTimeout(LogMessage, 1000, ["1"]);
-// CreateSafeTimeout(LogMessage, 1000, ["2"]);
-// CreateSafeTimeout(LogMessage, 1000, ["from lm1"]);
+// here standard setTimeout works the same way
+setTimeout(LogMessage, 1000, "1");
+setTimeout(() => setTimeout(LogMessage, 1000, "2"), 3000);
+setTimeout(() => setTimeout(LogMessage, 1000, "3"), 5000);
 
-// CreateSafeTimeout(LogMessage2, 1000, ["3"]);
-// CreateSafeTimeout(LogMessage2, 1000, ["4"]);
-// CreateSafeTimeout(LogMessage2, 1000, ["from lm2"]);
+// case with create safe timeout and multiple synchronous functions
+CreateSafe(LogMessage, 1000, ["1"], false);
+CreateSafe(LogMessage, 1000, ["2"], false);
+CreateSafe(LogMessage, 1000, ["from lm1"], false);
 
-// // standard setTimeout behavior, if not cleared all 6 calls will be executed:
-// setTimeout(LogMessage, 1000, "1");
-// setTimeout(LogMessage, 1000, "2");
-// setTimeout(LogMessage, 1000, "from lm1");
+CreateSafe(LogMessage2, 1000, ["3"], false);
+CreateSafe(LogMessage2, 1000, ["4"], false);
+CreateSafe(LogMessage2, 1000, ["from lm2"], false);
 
-// setTimeout(LogMessage2, 1000, "3");
-// setTimeout(LogMessage2, 1000, "4");
-// setTimeout(LogMessage2, 1000, "from lm2");
+// standard setTimeout behavior, if not cleared all 6 calls will be executed:
+setTimeout(LogMessage, 1000, "1");
+setTimeout(LogMessage, 1000, "2");
+setTimeout(LogMessage, 1000, "from lm1");
 
-// // asynchronous functions work the same as sync functions
-// // REWRITE property applies here too
-// const AsyncLogMessage = async (m: string) =>
-//   new Promise((r) => {
-//     setTimeout(() => {
-//       console.log(m);
-//       r(m);
-//     }, 1000);
-//   });
-// const AsyncLogMessage2 = async (m: string) =>
-//   new Promise((r) => {
-//     setTimeout(() => {
-//       console.log(m);
-//       r(m);
-//     }, 1000);
-//   });
+setTimeout(LogMessage2, 1000, "3");
+setTimeout(LogMessage2, 1000, "4");
+setTimeout(LogMessage2, 1000, "from lm2");
 
-// // case with create safe interval and single asynchronous function registered multiple times
-// CreateSafeInterval(AsyncLogMessage, 1000, ["1"]);
-// CreateSafeInterval(AsyncLogMessage, 1000, ["2"]);
-// CreateSafeInterval(AsyncLogMessage, 1000, ["3"]);
+// asynchronous functions work the same as sync functions
+// REWRITE property applies here too
+const AsyncLogMessage = async (m: string) =>
+  new Promise((r) => {
+    setTimeout(() => {
+      console.log(m);
+      r(m);
+    }, 1000);
+  });
+const AsyncLogMessage2 = async (m: string) =>
+  new Promise((r) => {
+    setTimeout(() => {
+      console.log(m);
+      r(m);
+    }, 1000);
+  });
 
-// // THE STANDARD TESTS HERE AND AFTER ARE THE SAME AS WITH SYNCHRONOUS FUNCTIONS
-// // standard setInterval behavior, if not cleared all 3 calls will be executed:
-// setInterval(AsyncLogMessage, 1000, "1");
-// setInterval(AsyncLogMessage, 1000, "2");
-// setInterval(AsyncLogMessage, 1000, "3");
+// case with create safe interval and single asynchronous function registered multiple times
+CreateSafe(AsyncLogMessage, 1000, ["1"], true);
+CreateSafe(AsyncLogMessage, 1000, ["2"], true);
+CreateSafe(AsyncLogMessage, 1000, ["3"], true);
 
-// // case with create safe interval and waiting for timeout with asynchronous function
-// CreateSafeInterval(AsyncLogMessage, 1000, ["1"]);
-// setTimeout(() => CreateSafeInterval(AsyncLogMessage, 1000, ["2"]), 3000);
-// setTimeout(() => CreateSafeInterval(AsyncLogMessage, 1000, ["3"]), 6000);
+// THE STANDARD TESTS HERE AND AFTER ARE THE SAME AS WITH SYNCHRONOUS FUNCTIONS
+// standard setInterval behavior, if not cleared all 3 calls will be executed:
+setInterval(AsyncLogMessage, 1000, "1");
+setInterval(AsyncLogMessage, 1000, "2");
+setInterval(AsyncLogMessage, 1000, "3");
 
-// // case with create safe interval and multiple asynchronous functions
-// CreateSafeInterval(AsyncLogMessage, 1000, ["1"]);
-// CreateSafeInterval(AsyncLogMessage, 1000, ["2"]);
-// CreateSafeInterval(AsyncLogMessage, 1000, ["from lm1"]);
+// case with create safe interval and waiting for timeout with asynchronous function
+CreateSafe(AsyncLogMessage, 1000, ["1"], true);
+setTimeout(() => CreateSafe(AsyncLogMessage, 1000, ["2"], true), 3000);
+setTimeout(() => CreateSafe(AsyncLogMessage, 1000, ["3"], true), 6000);
 
-// CreateSafeInterval(AsyncLogMessage2, 1000, ["3"]);
-// CreateSafeInterval(AsyncLogMessage2, 1000, ["4"]);
-// CreateSafeInterval(AsyncLogMessage2, 1000, ["from lm2"]);
+// case with create safe interval and multiple asynchronous functions
+CreateSafe(AsyncLogMessage, 1000, ["1"], true);
+CreateSafe(AsyncLogMessage, 1000, ["2"], true);
+CreateSafe(AsyncLogMessage, 1000, ["from lm1"], true);
 
-// // case with create safe timeout and single asynchronous function registered multiple times
-// CreateSafeTimeout(AsyncLogMessage, 1000, ["1"]);
-// CreateSafeTimeout(AsyncLogMessage, 1000, ["2"]);
-// CreateSafeTimeout(AsyncLogMessage, 1000, ["3"]);
+CreateSafe(AsyncLogMessage2, 1000, ["3"], true);
+CreateSafe(AsyncLogMessage2, 1000, ["4"], true);
+CreateSafe(AsyncLogMessage2, 1000, ["from lm2"], true);
 
-// // case with create safe timeout and waiting for timeout with asynchronous function
-// CreateSafeTimeout(AsyncLogMessage, 1000, ["1"]);
-// setTimeout(() => CreateSafeTimeout(AsyncLogMessage, 1000, ["2"]), 3000);
-// setTimeout(() => CreateSafeTimeout(AsyncLogMessage, 1000, ["3"]), 6000);
+// case with create safe timeout and single asynchronous function registered multiple times
+CreateSafe(AsyncLogMessage, 1000, ["1"], false);
+CreateSafe(AsyncLogMessage, 1000, ["2"], false);
+CreateSafe(AsyncLogMessage, 1000, ["3"], false);
 
-// // case with create safe timeout and multiple asynchronous functions
-// CreateSafeTimeout(AsyncLogMessage, 1000, ["1"]);
-// CreateSafeTimeout(AsyncLogMessage, 1000, ["2"]);
-// CreateSafeTimeout(AsyncLogMessage, 1000, ["from lm1"]);
+// case with create safe timeout and waiting for timeout with asynchronous function
+CreateSafe(AsyncLogMessage, 1000, ["1"], false);
+setTimeout(() => CreateSafe(AsyncLogMessage, 1000, ["2"], false), 3000);
+setTimeout(() => CreateSafe(AsyncLogMessage, 1000, ["3"], false), 6000);
 
-// CreateSafeTimeout(AsyncLogMessage2, 1000, ["3"]);
-// CreateSafeTimeout(AsyncLogMessage2, 1000, ["4"]);
-// CreateSafeTimeout(AsyncLogMessage2, 1000, ["from lm2"]);
+// case with create safe timeout and multiple asynchronous functions
+CreateSafe(AsyncLogMessage, 1000, ["1"], false);
+CreateSafe(AsyncLogMessage, 1000, ["2"], false);
+CreateSafe(AsyncLogMessage, 1000, ["from lm1"], false);
 
-// // NO CALL RESULTS SHUFFLE PROPERTY
-// // WHEN AN ASYNC FUNCTION IS REGISTERED WITH SAFE INTERVAL THE NEXT INVOCATION WILL BE ONLY AFTER THE PREVIOUS ONE RESOLVES
-// // WHEN AN ASYNC FUNCTION IS REGISTERED WITH SAFE TIMEOUT
-// // IN CASES WHEN THE TIMEOUT HAS PASSED AND THE FUNCTION IS ADDED TO THE STACK TO BE EXECUTED BUT DIDN'T RESOLVE YET
-// // AND THE NEXT SET TIMEOUT COMES IN FOR THE SAME FUNCTION EVEN WITH THE TIMEOUT AND RESOLVE TIME LESS THAN THE TIMEOUT FOR THE PREVIOUS REGISTRATION
-// // THE FUNCTIONS RESOLVE IN ORDER THEY WERE REGISTERED
+CreateSafe(AsyncLogMessage2, 1000, ["3"], false);
+CreateSafe(AsyncLogMessage2, 1000, ["4"], false);
+CreateSafe(AsyncLogMessage2, 1000, ["from lm2"], false);
 
-// const registerQueue = [];
-// const resolveQueue = [];
-// const PrintQueues = () => {
-//   console.log("registerQueue:", registerQueue);
-//   console.log("resolveQueue:", resolveQueue);
-// };
-// const WaitTillLastResolvedAndPrintQueues = () => {
-//   const LastResolveTime = resolveQueue[resolveQueue.length - 1];
-//   setTimeout(PrintQueues, LastResolveTime);
-// };
-// const RandomAsyncLog = async (waitFor?: number) =>
-//   new Promise((r) => {
-//     const wait = waitFor ? waitFor : Math.random() * 3000;
-//     registerQueue.push(wait);
-//     setTimeout(() => {
-//       resolveQueue.push(wait);
-//       r(wait);
-//     }, wait);
-//   });
+// NO CALL RESULTS SHUFFLE PROPERTY
+// WHEN AN ASYNC FUNCTION IS REGISTERED WITH SAFE INTERVAL THE NEXT INVOCATION WILL BE ONLY AFTER THE PREVIOUS ONE RESOLVES
+// WHEN AN ASYNC FUNCTION IS REGISTERED WITH SAFE TIMEOUT
+// IN CASES WHEN THE TIMEOUT HAS PASSED AND THE FUNCTION IS ADDED TO THE QUEUE TO BE EXECUTED BUT DIDN'T RESOLVE YET
+// AND THE NEXT SET TIMEOUT COMES IN FOR THE SAME FUNCTION EVEN WITH THE TIMEOUT AND RESOLVE TIME LESS THAN THE TIMEOUT FOR THE PREVIOUS REGISTRATION
+// THE FUNCTIONS RESOLVE IN ORDER THEY WERE REGISTERED
 
-// // Create safe interval case:
-// const c1 = CreateSafeInterval(RandomAsyncLog, 1000, []);
-// setTimeout(() => {
-//   c1();
-//   WaitTillLastResolvedAndPrintQueues();
-// }, 5000);
+const registerQueue = [];
+const resolveQueue = [];
+const PrintQueues = () => {
+  console.log("registerQueue:", registerQueue);
+  console.log("resolveQueue:", resolveQueue);
+};
+const WaitTillLastResolvedAndPrintQueues = () => {
+  const LastResolveTime = resolveQueue[resolveQueue.length - 1];
+  setTimeout(PrintQueues, LastResolveTime);
+};
+const RandomAsyncLog = async (waitFor?: number) =>
+  new Promise((r) => {
+    const wait = waitFor ? waitFor : Math.random() * 3000;
+    registerQueue.push(wait);
+    setTimeout(() => {
+      resolveQueue.push(wait);
+      r(wait);
+    }, wait);
+  });
 
-// // standard setInterval behavior, the results can SHUFFLE:
-// const interval = setInterval(RandomAsyncLog, 1000);
-// setTimeout(() => {
-//   clearInterval(interval);
-//   WaitTillLastResolvedAndPrintQueues();
-// }, 5000);
+// Create safe interval case:
+const c1 = CreateSafe(RandomAsyncLog, 1000, [], true);
+setTimeout(() => {
+  c1();
+  WaitTillLastResolvedAndPrintQueues();
+}, 5000);
+
+// standard setInterval behavior, the results can SHUFFLE:
+const interval = setInterval(RandomAsyncLog, 1000);
+setTimeout(() => {
+  clearInterval(interval);
+  WaitTillLastResolvedAndPrintQueues();
+}, 5000);
 
 // // Create safe timeout case:
 // CreateSafeTimeout(RandomAsyncLog, 1000, [5000]); // register 1000ms timeout with async function resolving after 5000ms
