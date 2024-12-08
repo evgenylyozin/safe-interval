@@ -4,7 +4,7 @@
 //   CreateSafeTimeout,
 // } from "./index.js";
 
-import { CreateSafe } from "./index.js";
+import { CreateSafe, CreateSafeMultiple } from "./index.js";
 
 /**
  * ACTUAL CASES WHICH DEMONSTRATE THE DIFFERENCES
@@ -196,79 +196,81 @@ setTimeout(() => {
   WaitTillLastResolvedAndPrintQueues();
 }, 5000);
 
-// // Create safe timeout case:
-// CreateSafeTimeout(RandomAsyncLog, 1000, [5000]); // register 1000ms timeout with async function resolving after 5000ms
-// setTimeout(() => {
-//   CreateSafeTimeout(RandomAsyncLog, 0, [1]);
-// }, 1500); // after 1500ms register new 0ms timeout with async function resolving after 1ms (when the previous function is already on the stack)
-// setTimeout(() => {
-//   WaitTillLastResolvedAndPrintQueues();
-// }, 7500); // wait all functions to resolve
+// Create safe timeout case:
+CreateSafe(RandomAsyncLog, 1000, [5000], false); // register 1000ms timeout with async function resolving after 5000ms
+setTimeout(() => {
+  CreateSafe(RandomAsyncLog, 0, [1], false);
+}, 1500); // after 1500ms register new 0ms timeout with async function resolving after 1ms (when the previous function is already on the stack)
+setTimeout(() => {
+  WaitTillLastResolvedAndPrintQueues();
+}, 7500); // wait all functions to resolve
 
-// // standard setTimeout behavior, the results will SHUFFLE:
-// setTimeout(RandomAsyncLog, 1000, 5000);
-// setTimeout(() => {
-//   setTimeout(RandomAsyncLog, 0, 1);
-// }, 1500);
-// setTimeout(() => {
-//   WaitTillLastResolvedAndPrintQueues();
-// }, 7500);
+// standard setTimeout behavior, the results will SHUFFLE:
+setTimeout(RandomAsyncLog, 1000, 5000);
+setTimeout(() => {
+  setTimeout(RandomAsyncLog, 0, 1);
+}, 1500);
+setTimeout(() => {
+  WaitTillLastResolvedAndPrintQueues();
+}, 7500);
 
-// // CreateSafeIntervalMultiple case:
-// // the only noticeable difference between the CreateSafeIntervalMultiple and default setInterval is when working with async functions
-// // randomly resolving function results will always be in the order the function was called
-// const c3 = CreateSafeIntervalMultiple(RandomAsyncLog, 1000, []);
-// setTimeout(() => c3(), 5000);
+// CreateSafeIntervalMultiple case:
+// the only noticeable difference between the CreateSafeIntervalMultiple and default setInterval is when working with async functions
+// randomly resolving function results will always be in the order the function was called
+const c3 = CreateSafeMultiple(RandomAsyncLog, 1000, [], true);
+setTimeout(() => {
+  c3();
+  PrintQueues();
+}, 5000);
 
-// // CreateSafeTimeout is the same as setTimeout in regards with async functions
+// CreateSafeTimeout is the same as setTimeout in regards with async functions
 
-// // CASES WITH THE CALLBACK FUNCTION DEFINED
-// //
-// // WITH STANDARD INTERVAL OR TIMEOUT THE RESULTS COULD BE
-// // USED ONLY IF THE FUNCTION WHICH IS CALLED IN THE
-// // INTERVAL OR TIMEOUT CALLS EXTERNAL FUNCTIONS ITSELF
+// CASES WITH THE CALLBACK FUNCTION DEFINED
+//
+// WITH STANDARD INTERVAL OR TIMEOUT THE RESULTS COULD BE
+// USED ONLY IF THE FUNCTION WHICH IS CALLED IN THE
+// INTERVAL OR TIMEOUT CALLS EXTERNAL FUNCTIONS ITSELF
 
-// // IN GENERAL, PROVIDING THE CALLBACK ALLOWS FOR DECOUPLING
-// // THE FUNCTION CALL AND THE CALL RESULT HANDLING
-// const SyncNumIdentity = (a: number) => a;
-// const AsyncNumIdentity = (a: number): Promise<number> =>
-//   new Promise((r) => setTimeout(() => r(a), 1000));
-// const LogNumCallback = (a: number) => {
-//   console.log("Logging from LogNumCallback:");
-//   console.log(a);
-// };
-// // each second the callback should be called with the number 1
-// CreateSafeInterval(SyncNumIdentity, 1000, [1], LogNumCallback);
-// // the same but with standard interval
-// // the callback has to be defined in the SyncNumIdentity for example
-// const SyncNumIdentityWithLog = (a: number) => {
-//   console.log("Logging from SyncNumIdentityWithLog:");
-//   console.log(a);
-//   return a;
-// };
-// setInterval(SyncNumIdentityWithLog, 1000, 1);
+// IN GENERAL, PROVIDING THE CALLBACK ALLOWS FOR DECOUPLING
+// THE FUNCTION CALL AND THE CALL RESULT HANDLING
+const SyncNumIdentity = (a: number) => a;
+const AsyncNumIdentity = (a: number): Promise<number> =>
+  new Promise((r) => setTimeout(() => r(a), 1000));
+const LogNumCallback = (a: number) => {
+  console.log("Logging from LogNumCallback:");
+  console.log(a);
+};
+// each second the callback should be called with the number 1
+CreateSafe(SyncNumIdentity, 1000, [1], true, LogNumCallback);
+// the same but with standard interval
+// the callback has to be defined in the SyncNumIdentity for example
+const SyncNumIdentityWithLog = (a: number) => {
+  console.log("Logging from SyncNumIdentityWithLog:");
+  console.log(a);
+  return a;
+};
+setInterval(SyncNumIdentityWithLog, 1000, 1);
 
-// // the same with async functions
-// // but every 2 seconds for the safe interval
-// // and 2 seconds the first time and then every ~1 second for the standard interval
-// CreateSafeInterval(AsyncNumIdentity, 1000, [1], LogNumCallback);
+// the same with async functions
+// but 2 seconds the first time and then every ~1 second
+CreateSafe(AsyncNumIdentity, 1000, [1], true, LogNumCallback);
 
-// const AsyncNumIdentityWithLog = (a: number) =>
-//   new Promise((r) => {
-//     setTimeout(() => {
-//       console.log("Logging from AsyncNumIdentityWithLog:");
-//       console.log(a);
-//       r(a);
-//     }, 1000);
-//   });
-// setInterval(AsyncNumIdentityWithLog, 1000, 1);
+const AsyncNumIdentityWithLog = (a: number) =>
+  new Promise((r) => {
+    setTimeout(() => {
+      console.log("Logging from AsyncNumIdentityWithLog:");
+      console.log(a);
+      r(a);
+    }, 1000);
+  });
+setInterval(AsyncNumIdentityWithLog, 1000, 1);
 
-// // the same for sync and async functions used in safe timeout
+// the same for sync and async functions used in safe timeout
 
-// CreateSafeTimeout(SyncNumIdentity, 1000, [1], LogNumCallback);
+CreateSafe(SyncNumIdentity, 1000, [1], false, LogNumCallback);
 
-// setTimeout(SyncNumIdentityWithLog, 1000, 1);
+setTimeout(SyncNumIdentityWithLog, 1000, 1);
 
-// CreateSafeTimeout(AsyncNumIdentity, 1000, [1], LogNumCallback);
+CreateSafe(AsyncNumIdentity, 1000, [1], false, LogNumCallback);
 
-// setTimeout(AsyncNumIdentityWithLog, 1000, 1);
+setTimeout(AsyncNumIdentityWithLog, 1000, 1);
