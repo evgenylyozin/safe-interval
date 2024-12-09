@@ -1396,3 +1396,103 @@ describe("testing no shuffle of results on callable set for execution and newly 
     clear();
   });
 });
+
+describe("testing remove queue feature, if the queue is due to be removed then the callable should not be executed even if scheduled by timeout or interval only the first call should be executed", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("no more than 1 call on safe interval", async () => {
+    const clear = CreateSafe(
+      ResolveInMSMock,
+      1,
+      [10000],
+      true,
+      IdentityCallbackMock,
+      true,
+    );
+    await vi.advanceTimersByTimeAsync(10); // schedule 10 calls
+    // by this time the first wrapped callable has started executing, no way stopping it now so 1 call should be done anyway
+    clear();
+    await vi.advanceTimersByTimeAsync(1000000); // but other calls should be discarded
+    expect(ResolveInMSMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledTimes(1); // the callback should be called too since the call was made
+  });
+  it("no more than 1 call on safe timeout", async () => {
+    // this one is mainly just to make sure the withQueue feature is working
+    // seamlessly on the timeout
+    // the queue anyway has only 1 call here
+    const clear = CreateSafe(
+      ResolveInMSMock,
+      1,
+      [10000],
+      false,
+      IdentityCallbackMock,
+      true,
+    );
+    await vi.advanceTimersByTimeAsync(10); // schedule 1 call
+    // by this time the first wrapped callable has started executing, no way stopping it now so 1 call should be done anyway
+    clear();
+    await vi.advanceTimersByTimeAsync(1000000);
+    expect(ResolveInMSMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledTimes(1); // the callback should be called too since the call was made
+  });
+  it("no more than 1 call on safe interval multiple", async () => {
+    const clear = CreateSafeMultiple(
+      ResolveInMSMock,
+      1,
+      [10000],
+      true,
+      IdentityCallbackMock,
+      true,
+    );
+    await vi.advanceTimersByTimeAsync(10); // schedule 10 calls
+    // by this time the first wrapped callable has started executing, no way stopping it now so 1 call should be done anyway
+    clear();
+    await vi.advanceTimersByTimeAsync(1000000); // but other calls should be discarded
+    expect(ResolveInMSMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledTimes(1); // the callback should be called too since the call was made
+  });
+  it("no more than 1 call on safe timeout multiple", async () => {
+    // this one is mainly just to make sure the withQueue feature is working
+    const clear = CreateSafeMultiple(
+      ResolveInMSMock,
+      1,
+      [10000],
+      false,
+      IdentityCallbackMock,
+      true,
+    );
+    await vi.advanceTimersByTimeAsync(10); // schedule 1 call
+    // by this time the first wrapped callable has started executing, no way stopping it now so 1 call should be done anyway
+    clear();
+    await vi.advanceTimersByTimeAsync(1000000);
+    expect(ResolveInMSMock).toBeCalledTimes(1);
+    expect(IdentityCallbackMock).toBeCalledTimes(1); // the callback should be called too since the call was made
+  });
+  // reregistering should work the same way if the withQueue flag is true
+  it("no more than 1 call on safe interval for the first callable with reregister", async () => {
+    CreateSafe(ResolveInMSMock, 1, [10000], true, IdentityCallbackMock, true);
+    await vi.advanceTimersByTimeAsync(10); // schedule 10 calls
+    CreateSafe(
+      ResolveInMSMock,
+      1000,
+      [20000],
+      true,
+      IdentityCallbackMock,
+      true,
+    );
+    // here we expect that the ResolveInMSMock is called with 10000 only once
+    // and then is called only with 20000
+    await vi.advanceTimersByTimeAsync(160000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(1, 10000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(2, 20000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(3, 20000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(4, 20000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(5, 20000);
+  });
+  // reregistering for safe timeout doesn't make any change => the call should be only 1 anyway
+  // reregistering for multiples is not a thing at all so no other tests here
+});

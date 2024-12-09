@@ -28,6 +28,7 @@ type Cache = {
  * Destroys a timeout or interval by calling its clear function and removing callable from the FunctionToClear map.
  * @param callable The callable function which is registered to be called after the timeout or periodically
  * @param ftc The map of callable to clear function
+ * @param withQueue If true, the queue of unresolved async functions for the callable is also removed
  * currently there is no valid place to remove keys from
  * ftq, ftl, ftcb so that the pending invocations are resolved properly
  * if any memory related issues arise in the future, it might be
@@ -35,15 +36,27 @@ type Cache = {
  * and then removing all the callable keys from all the maps
  * For now WeakMap is used which can potentially alleviate memory issues
  */
-const destroy = (callable: Callable, ftc: FunctionToClear) => {
+const destroy = (
+  callable: Callable,
+  cache: Cache,
+  withQueue: boolean = false,
+) => {
   // removing only the timeout or interval, not queue or loop or callback so that all the
   // pending invocations of the callable are resolved
-  if (ftc.has(callable)) {
-    const Clear = ftc.get(callable);
+  if (cache.ftc.has(callable)) {
+    const Clear = cache.ftc.get(callable);
     if (Clear) {
       Clear();
     }
-    ftc.delete(callable);
+    cache.ftc.delete(callable);
+  }
+  // if the withQueue flag is true, then remove the queue for the callable too
+  // remove it fully from the map to tell other code that the queue was cleared on purpose with clear function
+  // or on reregister
+  if (withQueue) {
+    if (cache.ftq.has(callable)) {
+      cache.ftq.delete(callable);
+    }
   }
 };
 
@@ -148,6 +161,16 @@ const Start = <T extends Callable>(
   cache: Cache,
 ) => {
   const { ftc, ftq } = cache;
+  // the timeout callback is made async
+  // on purpose so that if the calling code
+  // is clearing the timeout or interval with the withQueue flag
+  // the first wrapped call to the callable is not pushed to the queue
+  // and not resolved in spite of the clear function called
+  // without the async callback here and awaiting below
+  // the things would go as: synchronously: register new callable, push it to the queue, start the loop, start the await for the wrapped callable,
+  // and only then clear the queue (hence the first call would be executed anyway)
+  // with the async here the synchronous operations end on the register then if the clear was called it would empty the queue
+  // before anything from the queue is set to be executed
   const TimeoutCallback = () => {
     // push the function into the queue
     // if the callable is scheduled after the timeout passes (not cancelled)
@@ -182,6 +205,7 @@ const Start = <T extends Callable>(
  * @param interval If true, an interval is created.
  * @param cache The cache object.
  * @param cb Optional callback function to be called with the result of the callable function.
+ * @param removeQueue If true, the queue of the callable is removed.
  */
 const Register = <T extends Callable>(
   callable: T,
@@ -190,9 +214,10 @@ const Register = <T extends Callable>(
   interval: boolean,
   cache: Cache,
   cb?: Callback<T>,
+  removeQueue: boolean = false,
 ): void => {
-  const { ftc, ftq, ftl, ftcb } = cache;
-  destroy(callable, ftc);
+  const { ftq, ftl, ftcb } = cache;
+  destroy(callable, cache, removeQueue);
   setCallback(callable, cb, ftcb);
   setQueue(callable, ftq);
   setLoop(callable, ftl);
@@ -225,10 +250,15 @@ const CreateMaps = () => {
  * Main points of the safe interval or timeout are:
  * - no shuffling of the callable invocations and resolved results (like if an async function was not finished yet but the next one is already called and finished before the first one)
  * - only one interval or timeout for the same callable
- * - predictable clear function (if the interval or timeout is cleared before the callable added to the stack then no call will be made, if it was added already - the results will be in the predictable order)
+ * - special clear function (if the interval or timeout is cleared before any async operation is called then no call will be made,
+ *  if the callable is added to the queue then at least one call will be made
+ *  if an interval schedules more than one call and the clear function or reregister happened
+ * earlier than all the scheduled calls are resolved then all not resolved and not added to the stack
+ * calls which were in the queue are discarded)
  * - no way to create both interval and timeout for the same callable
  * - ability to reregister the callback function (then all unresolved calls from the queue will use the last registered callback for their results)
  * - ability to reregister the callable arguments and timeout which leads to resolving with the new arguments and after the new timeout if the callable wasn't pushed to the queue already
+ * - ability to remove previous queue for the callable with reregister
  * Can accept a callback function which is expecting the result of the callable as its argument
  * if the callback is provided then it is going to be called after the callable resolves
  * in case of the interval => the callback is called many times
@@ -243,6 +273,7 @@ export const CreateSafe = (() => {
    * @param callableArgs Arguments for the function.
    * @param interval If true, an interval is created.
    * @param cb Optional callback function to be called with the result of the callable function.
+   * @param removeQueue If true, the queue of the callable is removed.
    * @returns A function that, when called, stops the interval from executing further.
    */
   return <T extends Callable>(
@@ -251,11 +282,12 @@ export const CreateSafe = (() => {
     callableArgs: Parameters<T>,
     interval: boolean,
     cb?: Callback<T>,
+    removeQueue: boolean = false,
   ): (() => void) => {
-    Register(callable, timeout, callableArgs, interval, cache, cb);
+    Register(callable, timeout, callableArgs, interval, cache, cb, removeQueue);
     // return the function to destroy the interval
     return () => {
-      destroy(callable, cache.ftc);
+      destroy(callable, cache, removeQueue);
     };
   };
 })();
@@ -266,7 +298,7 @@ export const CreateSafe = (() => {
  * Every call to the function creates a new interval/timeout for the callable.
  * characteristics which remain from CreateSafe are:
  * - no shuffling of the callable invocations and resolved results (inside the same interval)
- * - predictable clear function
+ * - special clear function
  * - can accept a callback
  * not like CreateSafe:
  * - creates interval/timeout for the same callable each time allowing for not related intervals/timeouts calling the same callable (no matter the arguments, timeout)
@@ -279,11 +311,12 @@ export const CreateSafeMultiple = <T extends Callable>(
   callableArgs: Parameters<T>,
   interval: boolean,
   cb?: Callback<T>,
+  removeQueue: boolean = false,
 ) => {
   const cache = CreateMaps();
-  Register(callable, timeout, callableArgs, interval, cache, cb);
+  Register(callable, timeout, callableArgs, interval, cache, cb, removeQueue);
   // return the function to destroy the interval
   return () => {
-    destroy(callable, cache.ftc);
+    destroy(callable, cache, removeQueue);
   };
 };
