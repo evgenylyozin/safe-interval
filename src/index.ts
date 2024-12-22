@@ -23,6 +23,15 @@ type Cache = {
   ftq: FunctionToQueue;
   ftl: FunctionToLoop;
 };
+// type for the create safe parameters
+type Params<T extends Callable> = {
+  callable: T;
+  callableArgs: Parameters<T>;
+  isInterval?: boolean;
+  timeout?: number;
+  cb?: Callback<T>;
+  removeQueue?: boolean;
+};
 
 /**
  * Destroys a timeout or interval by calling its clear function and removing callable from the FunctionToClear map.
@@ -150,7 +159,7 @@ const StartResolveLoopIfNeeded = (callable: Callable, cache: Cache) => {
  * @param callable Function to be called at each interval.
  * @param timeout Interval in milliseconds.
  * @param callableArgs Arguments for the function.
- * @param interval If true, an interval is created.
+ * @param isInterval If true, an interval is created.
  * @param cache The cache object.
  */
 const Start = <T extends Callable>(
@@ -202,26 +211,18 @@ const Start = <T extends Callable>(
  * @param callable Function to be executed at each interval.
  * @param timeout Interval duration in milliseconds.
  * @param callableArgs Additional arguments for the callable function.
- * @param interval If true, an interval is created.
+ * @param isInterval If true, an interval is created.
  * @param cache The cache object.
  * @param cb Optional callback function to be called with the result of the callable function.
  * @param removeQueue If true, the queue of the callable is removed.
  */
-const Register = <T extends Callable>(
-  callable: T,
-  timeout: number | undefined,
-  callableArgs: Parameters<T>,
-  interval: boolean,
-  cache: Cache,
-  cb?: Callback<T>,
-  removeQueue: boolean = false,
-): void => {
+const Register = <T extends Callable>(p: Params<T>, cache: Cache): void => {
   const { ftq, ftl, ftcb } = cache;
-  destroy(callable, cache, removeQueue);
-  setCallback(callable, cb, ftcb);
-  setQueue(callable, ftq);
-  setLoop(callable, ftl);
-  Start(callable, timeout, callableArgs, interval, cache);
+  destroy(p.callable, cache, p.removeQueue);
+  setCallback(p.callable, p.cb, ftcb);
+  setQueue(p.callable, ftq);
+  setLoop(p.callable, ftl);
+  Start(p.callable, p.timeout, p.callableArgs, p.isInterval, cache);
 };
 
 /**
@@ -271,23 +272,16 @@ export const CreateSafe = (() => {
    * @param callable Function to be called at each interval or timeout.
    * @param timeout Interval/timeout duration in milliseconds.
    * @param callableArgs Arguments for the function.
-   * @param interval If true, an interval is created.
+   * @param isInterval If true, an interval is created.
    * @param cb Optional callback function to be called with the result of the callable function.
    * @param removeQueue If true, the queue of the callable is removed.
    * @returns A function that, when called, stops the interval from executing further.
    */
-  return <T extends Callable>(
-    callable: T,
-    timeout: number | undefined,
-    callableArgs: Parameters<T>,
-    interval: boolean,
-    cb?: Callback<T>,
-    removeQueue: boolean = false,
-  ): (() => void) => {
-    Register(callable, timeout, callableArgs, interval, cache, cb, removeQueue);
+  return <T extends Callable>(p: Params<T>): (() => void) => {
+    Register(p, cache);
     // return the function to destroy the interval
     return () => {
-      destroy(callable, cache, removeQueue);
+      destroy(p.callable, cache, p.removeQueue);
     };
   };
 })();
@@ -305,18 +299,11 @@ export const CreateSafe = (() => {
  * there is no closure over the cache here so
  * each call creates a new cache and the calls are not related through the cache or by any other means
  */
-export const CreateSafeMultiple = <T extends Callable>(
-  callable: T,
-  timeout: number | undefined,
-  callableArgs: Parameters<T>,
-  interval: boolean,
-  cb?: Callback<T>,
-  removeQueue: boolean = false,
-) => {
+export const CreateSafeMultiple = <T extends Callable>(p: Params<T>) => {
   const cache = CreateMaps();
-  Register(callable, timeout, callableArgs, interval, cache, cb, removeQueue);
+  Register(p, cache);
   // return the function to destroy the interval
   return () => {
-    destroy(callable, cache, removeQueue);
+    destroy(p.callable, cache, p.removeQueue);
   };
 };
