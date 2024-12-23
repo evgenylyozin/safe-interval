@@ -166,7 +166,7 @@ const Start = <T extends Callable>(
   callable: T,
   timeout: number | undefined,
   callableArgs: Parameters<T>,
-  interval: boolean,
+  interval: boolean | undefined,
   cache: Cache,
 ) => {
   const { ftc, ftq } = cache;
