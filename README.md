@@ -49,7 +49,7 @@ const clear = CreateSafe({
   timeout: 1000, // every ~1 second + resolve time of the previous calls if SomeFunction is async
   isInterval: true, // this is an interval
 });
-clear(); // this will clear the interval but the first call will be executed anyway
+clear(); // this will clear the interval
 ```
 
 Create a timeout:
