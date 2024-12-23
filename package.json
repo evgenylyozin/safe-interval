@@ -1,5 +1,5 @@
 {
-  "name": "my-package",
+  "name": "safe-interval",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
@@ -15,7 +15,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "types": "dist/index.d.ts",
   "devDependencies": {
     "@eslint/js": "^9.13.0",
