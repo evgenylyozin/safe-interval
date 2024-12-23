@@ -160,7 +160,7 @@ Not like CreateSafe:
 
 ## Differences with standard setInterval
 
-This section is here to show the main differences in using CreateSafe over standard setInterval. Each example has a gif preview which is clickable. Upon click a mp4 demo should open (useful to make pauses if needed).
+This section is here to show the main differences in using CreateSafe over standard setInterval.
 
 ### ReRegistering
 
