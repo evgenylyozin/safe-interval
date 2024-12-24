@@ -1,7 +1,7 @@
 import { SpyOnCache } from "./test.helpers.js";
 
 // the function which is registered to be called after the timeout or periodically
-export type Callable = (...args: unknown[]) => unknown;
+type Callable = (...args: unknown[]) => unknown;
 // the function which is returned after registering a new interval or timeout to remove such interval or timeout
 type Clear = () => void;
 // a map of callable to clear function

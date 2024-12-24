@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateSafe, CreateSafeMultiple } from "../src/index.js";
-import { ClearQueueForCallable, CreateSafeCache } from "../src/test.helpers.js";
+import { ClearCaches, CreateSafeCache } from "../src/test.helpers.js";
 
 const Arguments = [
   [], // test the function with 0 arguments
@@ -19,14 +19,28 @@ const DataIdentity = (
 
 const DataIdentityMock = vi.fn(DataIdentity);
 
+// setup for each test
+// clearing all caches and advancing time to
+// close all hanging async ops on the stack are
+// done here
+// BUT THE PROPER REMOVING OF HANGING TIMEOUTS AND INTERVALS
+// SHOULD BE DONE INSIDE EACH TEST ACCORDINGLY
+// THE ONLY MARKER WHICH COULD TELL THAT THE CLEAR FUNCTION IS NOT
+// PROPERLY CALLED IS THE TEST FAILS WITH TIMEOUT
+// WHICH SHOULD NOT HAPPEN
+beforeEach(() => {
+  // using fake timers to advance time faster
+  vi.useFakeTimers();
+  // clear the caches (leaving it with empty maps)
+  ClearCaches();
+});
+afterEach(async () => {
+  const MAX_NUM_WHEN_TESTS_DONT_LAG = 9999999999999;
+  // advance time so all hanging async ops are done
+  await vi.advanceTimersByTimeAsync(MAX_NUM_WHEN_TESTS_DONT_LAG);
+  vi.clearAllMocks(); // clear all mocks statistics
+});
 describe("testing CreateSafe as interval with synchronous function with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   for (const args of Arguments) {
     it("only one interval for the same callable", async () => {
       // the callable should be called once with the expected data
@@ -143,12 +157,6 @@ const ResolveRandomly = vi.fn(async () => {
 });
 
 describe("testing CreateSafe as interval with asynchronous function with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   for (const args of Arguments) {
     it("only one interval for the same callable", async () => {
       // the callable should be called once with the expected data
@@ -286,12 +294,6 @@ describe("testing CreateSafe as interval with asynchronous function with single 
 });
 
 describe("testing CreateSafe as timeout with synchronous function with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   for (const args of Arguments) {
     it("only one timeout for the same callable", async () => {
       // the callable should be called once with the expected data
@@ -364,12 +366,6 @@ describe("testing CreateSafe as timeout with synchronous function with single ar
 });
 
 describe("testing CreateSafe as timeout with asynchronous function with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   for (const args of Arguments) {
     it("only one timeout for the same callable", async () => {
       // the callable should be called once with the expected data
@@ -484,12 +480,6 @@ describe("testing CreateSafe as timeout with asynchronous function with single a
 // create safe interval multiple
 
 describe("testing CreateSafeMultiple as interval with synchronous function with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   for (const args of Arguments) {
     it("many intervals for the same callable", async () => {
       // the callable should be called inside any created interval with the expected data
@@ -686,12 +676,6 @@ describe("testing CreateSafeMultiple as interval with synchronous function with 
 });
 
 describe("testing CreateSafeMultiple as interval with asynchronous function with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   for (const args of Arguments) {
     it("many intervals for the same callable", async () => {
       // the callable should be called inside any created interval with the expected data
@@ -881,12 +865,6 @@ describe("testing CreateSafeMultiple as interval with asynchronous function with
 // CreateSafeMultiple
 
 describe("testing CreateSafeMultiple as timeout with synchronous function with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   for (const args of Arguments) {
     it("many timeouts for the same callable", async () => {
       // the callable should be called once for each timeout with the expected data
@@ -1059,12 +1037,6 @@ describe("testing CreateSafeMultiple as timeout with synchronous function with s
 });
 
 describe("testing CreateSafeMultiple as timeout with asynchronous function with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   for (const args of Arguments) {
     it("many timeouts for the same callable", async () => {
       // the callable should be called inside any created interval with the expected data
@@ -1244,12 +1216,6 @@ describe("testing CreateSafeMultiple as timeout with asynchronous function with 
 });
 
 describe("testing CreateSafe as interval with synchronous function with single argument the function is added after the timeout passes", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   it("only one interval for the same callable even after the timeout", async () => {
     // the callable should be called two times with different data
     // the first one is when the first timeout passes
@@ -1315,12 +1281,6 @@ describe("testing CreateSafe as interval with synchronous function with single a
 });
 
 describe("testing CreateSafe as timeout with synchronous function with single argument when the same callable is added after the timeout", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   it("only one timeout for the same callable and new timeout for it after the timeout", async () => {
     CreateSafe({
       callable: DataIdentityMock,
@@ -1397,13 +1357,6 @@ const DataIdentity2 = (
 const DataIdentity2Mock = vi.fn(DataIdentity2);
 
 describe("testing CreateSafe as interval with different functions with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   for (const args of Arguments) {
     it("two different intervals for different callables", async () => {
       CreateSafe({
@@ -1492,12 +1445,6 @@ describe("testing CreateSafe as interval with different functions with single ar
 });
 
 describe("testing CreateSafe as timeout with different functions with single argument", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   for (const args of Arguments) {
     it("two different timeouts for different callables", async () => {
       CreateSafe({
@@ -1607,12 +1554,6 @@ const CallbackMock = vi.fn(Callback);
 const OtherCallbackMock = vi.fn(OtherCallback);
 
 describe("testing callback usage", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   it("callback is called for each interval in CreateSafe", async () => {
     const clear = CreateSafe({
       callable: ResolveAndReturnMock,
@@ -1839,12 +1780,6 @@ const RejectWithReturn = async () => {
 const RejectWithReturnMock = vi.fn(RejectWithReturn);
 
 describe("testing rejects and error throws", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   it("error thrown in safe interval if caught in the callable then interval proceeds", async () => {
     const clear = CreateSafe({
       callable: ErrorThrowMock,
@@ -2148,12 +2083,6 @@ describe("testing rejects and error throws", () => {
 });
 
 describe("testing no shuffle of results on callable set for execution and newly registered", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   it("on safe interval no shuffle", async () => {
     CreateSafe({
       callable: ResolveInMSMock,
@@ -2245,12 +2174,6 @@ describe("testing no shuffle of results on callable set for execution and newly 
 });
 
 describe("testing remove queue feature, if the queue is due to be removed then the callable should not be executed even if scheduled by timeout or interval only the first call should be executed", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   it("no more than 1 call on safe interval", async () => {
     const clear = CreateSafe({
       callable: ResolveInMSMock,
@@ -2330,7 +2253,7 @@ describe("testing remove queue feature, if the queue is due to be removed then t
       removeQueue: true,
     });
     await vi.advanceTimersByTimeAsync(10); // schedule 10 calls
-    CreateSafe({
+    const clear = CreateSafe({
       callable: ResolveInMSMock,
       callableArgs: [20000],
       timeout: 1,
@@ -2346,18 +2269,13 @@ describe("testing remove queue feature, if the queue is due to be removed then t
     expect(ResolveInMSMock).toHaveBeenNthCalledWith(3, 20000);
     expect(ResolveInMSMock).toHaveBeenNthCalledWith(4, 20000);
     expect(ResolveInMSMock).toHaveBeenNthCalledWith(5, 20000);
+    clear();
   });
   // reregistering for safe timeout doesn't make any change => the call should be only 1 anyway
   // reregistering for multiples is not a thing at all so no other tests here
 });
 
 describe("testing awaitCallback feature", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   it("if awaitCallback is set to true then the next callable should be pushed to the stack only after the cb has been resolved (safe interval)", async () => {});
   it("if awaitCallback is set to true then the next callable should be pushed to the stack only after the cb has been resolved (safe interval multiple)", async () => {});
   it("if awaitCallback is set to false or is undefined then the next callable should be pushed to the stack immediately after the cb for the previous one was called (safe interval)", async () => {});
@@ -2372,13 +2290,36 @@ describe("testing arguments swap for callables in the queue if the queue is not 
   // the next registered callable should not affect previously pushed callables
   // the push has already happened for the previous callables with their respective arguments
   // so the next push with new arguments should only add the new callable to the queue with these arguments
-  beforeEach(() => {
-    vi.useFakeTimers();
+  it("swap should not happen in safe interval", async () => {
+    CreateSafe({
+      callable: ResolveInMSMock,
+      callableArgs: [10000],
+      timeout: 100,
+      isInterval: true,
+    });
+    // add 10 callables to the queue
+    await vi.advanceTimersByTimeAsync(1000);
+    // then register new interval with new args for the callable
+    const clear = CreateSafe({
+      callable: ResolveInMSMock,
+      callableArgs: [20000],
+      timeout: 100,
+      isInterval: true,
+    });
+    await vi.advanceTimersByTimeAsync(1000); // add 10 more to the queue with new args
+    clear(); // stop the interval
+    // then resolve all 20
+    await vi.advanceTimersByTimeAsync(400000);
+    // we expect that the first 10 calls to the ResolveInMSMock would be with 10000 as an argument
+    // and the last 10 will have the 20000 as an argument
+    expect(ResolveInMSMock).toHaveBeenCalledTimes(20);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(1, 10000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(5, 10000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(10, 10000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(11, 20000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(15, 20000);
+    expect(ResolveInMSMock).toHaveBeenNthCalledWith(20, 20000);
   });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-  it("swap should not happen in safe interval", async () => {});
   it("swap should not happen in safe interval multiple", async () => {});
   // not testing it for safe timeout and safe timeout multiple
   // since the callable either is not set to the queue (if cleared before the timeout) or
@@ -2391,19 +2332,7 @@ describe("testing timeout swap for callables in the queue if the queue is cleare
   // should go to the queue after this new timeout
   // the callables on the queue were pushed with their respective timeouts
   // so the last timeout only affects the last callable
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
   it("swap should not happen in safe interval", async () => {
-    // by now the ResolveInMSMock has thousands of unresolved records in the queue
-    // we could add the clear queue argument everywhere in the previous tests
-    // and clear the intervals to empty the queue but this would require to
-    // add not related to the tests argument and possibly some clear issues
-    // so there is a dedicated function to clear specific queue for this purpose
-    ClearQueueForCallable(ResolveInMSMock, true);
     CreateSafe({
       callable: ResolveInMSMock,
       callableArgs: [10000],
@@ -2414,16 +2343,17 @@ describe("testing timeout swap for callables in the queue if the queue is cleare
     await vi.advanceTimersByTimeAsync(1000);
     // inspect the queue with TestCache data
     expect(CreateSafeCache.ftq.has(ResolveInMSMock)).toBe(true);
-    expect(CreateSafeCache.ftq.get(ResolveInMSMock)?.length).toBe(10); // the first one immediately gets shifted by the loop but in the tests suite and considering the global nature of the Cache the ResolveInMSMock has been added to the stack and hasn't resolved yet so here we added 10 new calls and expect not 9 but 10 in the queue
+    expect(CreateSafeCache.ftq.get(ResolveInMSMock)?.length).toBe(9); // the first one immediately gets shifted by the loop so 9 here
     // then register a new callable with new timeout
-    CreateSafe({
+    const clear = CreateSafe({
       callable: ResolveInMSMock,
       callableArgs: [10000],
       timeout: 2000, // this one schedules only every ~2000ms
       isInterval: true,
     });
     await vi.advanceTimersByTimeAsync(5000); // this timeframe should only add 2 new callables to the queue
-    expect(CreateSafeCache.ftq.get(ResolveInMSMock)?.length).toBe(12);
+    clear(); // stop the interval
+    expect(CreateSafeCache.ftq.get(ResolveInMSMock)?.length).toBe(11);
   });
   // not testing it for safe timeout and safe timeout multiple
   // not testing for multiple interval either since the intervals are independent

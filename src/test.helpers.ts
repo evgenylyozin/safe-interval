@@ -1,4 +1,4 @@
-import { Cache, Callable } from "./index.js";
+import { Cache } from "./index.js";
 
 export const CheckTestENV = () => {
   if (
@@ -32,15 +32,23 @@ export const SpyOnCache = (cache: Cache, createSafeCache = false) => {
 export let CreateSafeCache: Cache = undefined;
 export let CreateSafeMultipleCache: Cache = undefined;
 
-export const ClearQueueForCallable = (
-  callable: Callable,
-  createSafeCache = false,
-) => {
+export const ClearCaches = () => {
   if (CheckTestENV()) {
-    if (createSafeCache) {
-      CreateSafeCache.ftq.delete(callable);
-    } else {
-      CreateSafeMultipleCache.ftq.delete(callable);
+    // clear the whole cache (leaving it with empty maps)
+    console.log("CLEARING CACHES");
+    if (CreateSafeCache) {
+      // doing it this way to not lose the link to
+      // the original cache object
+      CreateSafeCache.ftc = new WeakMap();
+      CreateSafeCache.ftq = new WeakMap();
+      CreateSafeCache.ftl = new WeakMap();
+      CreateSafeCache.ftcb = new WeakMap();
+    }
+    if (CreateSafeMultipleCache) {
+      CreateSafeMultipleCache.ftc = new WeakMap();
+      CreateSafeMultipleCache.ftq = new WeakMap();
+      CreateSafeMultipleCache.ftl = new WeakMap();
+      CreateSafeMultipleCache.ftcb = new WeakMap();
     }
   }
 };
