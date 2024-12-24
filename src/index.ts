@@ -1,5 +1,7 @@
+import { SpyOnCache } from "./test.helpers.js";
+
 // the function which is registered to be called after the timeout or periodically
-type Callable = (...args: unknown[]) => unknown;
+export type Callable = (...args: unknown[]) => unknown;
 // the function which is returned after registering a new interval or timeout to remove such interval or timeout
 type Clear = () => void;
 // a map of callable to clear function
@@ -17,7 +19,7 @@ type Callback<T extends Callable> = (
 type FunctionToCallback = WeakMap<Callable, Callback<Callable> | undefined>;
 
 // type of the cache of all maps
-type Cache = {
+export type Cache = {
   ftc: FunctionToClear;
   ftcb: FunctionToCallback;
   ftq: FunctionToQueue;
@@ -243,7 +245,9 @@ const CreateMaps = () => {
   const ftl: FunctionToLoop = new WeakMap();
   // to track callbacks
   const ftcb: FunctionToCallback = new WeakMap();
-  return { ftc, ftq, ftl, ftcb };
+
+  const cache = { ftc, ftq, ftl, ftcb } as Cache;
+  return cache;
 };
 /**
  * Function to manage the execution of a given function at specified intervals, ensuring each invocation completes (resolves) before the next one starts.
@@ -267,6 +271,9 @@ const CreateMaps = () => {
  */
 export const CreateSafe = (() => {
   const cache = CreateMaps();
+  // cache spy for testing purposes
+  // in production does nothing
+  SpyOnCache(cache, true);
   /**
    * Main function to create and manage safe intervals or timeouts for a given function.
    * @param callable Function to be called at each interval or timeout.
@@ -301,6 +308,9 @@ export const CreateSafe = (() => {
  */
 export const CreateSafeMultiple = <T extends Callable>(p: Params<T>) => {
   const cache = CreateMaps();
+  // cache spy for testing purposes
+  // in production does nothing
+  SpyOnCache(cache);
   Register(p, cache);
   // return the function to destroy the interval
   return () => {

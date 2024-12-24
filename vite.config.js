@@ -20,5 +20,8 @@ export default defineConfig({
     coverage: {
       reporter: ["text", "lcov", "clover"],
     },
+    env: {
+      TEST_ENVIRONMENT: "enabled",
+    },
   },
 });

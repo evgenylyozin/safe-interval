@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateSafe, CreateSafeMultiple } from "../src/index.js";
+import { ClearQueueForCallable, CreateSafeCache } from "../src/test.helpers.js";
 
 const Arguments = [
   [], // test the function with 0 arguments
@@ -2396,7 +2397,34 @@ describe("testing timeout swap for callables in the queue if the queue is cleare
   afterEach(() => {
     vi.clearAllMocks();
   });
-  it("swap should not happen in safe interval", async () => {});
-  it("swap should not happen in safe interval multiple", async () => {});
+  it("swap should not happen in safe interval", async () => {
+    // by now the ResolveInMSMock has thousands of unresolved records in the queue
+    // we could add the clear queue argument everywhere in the previous tests
+    // and clear the intervals to empty the queue but this would require to
+    // add not related to the tests argument and possibly some clear issues
+    // so there is a dedicated function to clear specific queue for this purpose
+    ClearQueueForCallable(ResolveInMSMock, true);
+    CreateSafe({
+      callable: ResolveInMSMock,
+      callableArgs: [10000],
+      timeout: 100,
+      isInterval: true,
+    });
+    // add 10 callables to the queue
+    await vi.advanceTimersByTimeAsync(1000);
+    // inspect the queue with TestCache data
+    expect(CreateSafeCache.ftq.has(ResolveInMSMock)).toBe(true);
+    expect(CreateSafeCache.ftq.get(ResolveInMSMock)?.length).toBe(10); // the first one immediately gets shifted by the loop but in the tests suite and considering the global nature of the Cache the ResolveInMSMock has been added to the stack and hasn't resolved yet so here we added 10 new calls and expect not 9 but 10 in the queue
+    // then register a new callable with new timeout
+    CreateSafe({
+      callable: ResolveInMSMock,
+      callableArgs: [10000],
+      timeout: 2000, // this one schedules only every ~2000ms
+      isInterval: true,
+    });
+    await vi.advanceTimersByTimeAsync(5000); // this timeframe should only add 2 new callables to the queue
+    expect(CreateSafeCache.ftq.get(ResolveInMSMock)?.length).toBe(12);
+  });
   // not testing it for safe timeout and safe timeout multiple
+  // not testing for multiple interval either since the intervals are independent
 });
