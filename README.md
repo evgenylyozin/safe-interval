@@ -120,7 +120,23 @@ the form of an object with these fields:
 **Is applied only with CreateSafe method.** If a function is
 registered with CreateSafe and then the same function is registered again (even with different arguments or timeout), there will be only one interval
 managing such function and the arguments/timeout will be the last ones passed to
-the CreateSafe method. See [ReRegistering demo](#reregistering).
+the CreateSafe method from now on. See [ReRegistering demo](#reregistering).
+
+Nuances:
+
+- If the previous interval has added some functions to the queue already
+  (with the arguments which were passed on such interval creation).
+  Newly registered callable with new arguments doesn't affect the ones
+  already pushed to the queue. Example: SomeFunc(1,2,4) was added to the queue but
+  not on the stack => then new interval is registered for SomeFunc(4,5,6) => the
+  previous interval is cleared and the SomeFunc(1,2,4) version is not pushed to the
+  queue anymore but SomeFunc(4,5,6) is pushed from now on => If there are some not
+  resolved yet SomeFunc(1,2,4) versions in the queue by now then they would be resolved
+  first => then comes the turn of SomeFunc(4,5,6) versions
+- If reregister happened with different timeout, the previous interval is cleared and
+  the new one is created with the new timeout but if the previous one has already pushed
+  any callables to the queue with the previous timeout length => then provided the queue
+  was not cleared, all callables on the queue will be executed in turn
 
 ### Clearing the queue
 

@@ -2349,3 +2349,54 @@ describe("testing remove queue feature, if the queue is due to be removed then t
   // reregistering for safe timeout doesn't make any change => the call should be only 1 anyway
   // reregistering for multiples is not a thing at all so no other tests here
 });
+
+describe("testing awaitCallback feature", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("if awaitCallback is set to true then the next callable should be pushed to the stack only after the cb has been resolved (safe interval)", async () => {});
+  it("if awaitCallback is set to true then the next callable should be pushed to the stack only after the cb has been resolved (safe interval multiple)", async () => {});
+  it("if awaitCallback is set to false or is undefined then the next callable should be pushed to the stack immediately after the cb for the previous one was called (safe interval)", async () => {});
+  it("if awaitCallback is set to false or is undefined then the next callable should be pushed to the stack immediately after the cb for the previous one was called (safe interval multiple)", async () => {});
+  // not applicable for safe timeout and safe timeout multiple
+  // since the callable is only called once with these methods
+  // and in general it doesn't matter if we wait for the cb or not
+});
+
+describe("testing arguments swap for callables in the queue if the queue is not cleared", () => {
+  // if there are callables in the queue and if the queue is not cleared
+  // the next registered callable should not affect previously pushed callables
+  // the push has already happened for the previous callables with their respective arguments
+  // so the next push with new arguments should only add the new callable to the queue with these arguments
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("swap should not happen in safe interval", async () => {});
+  it("swap should not happen in safe interval multiple", async () => {});
+  // not testing it for safe timeout and safe timeout multiple
+  // since the callable either is not set to the queue (if cleared before the timeout) or
+  // synchronously added to the stack immediately after being pushed to the queue
+});
+
+describe("testing timeout swap for callables in the queue if the queue is cleared", () => {
+  // if there are callables in the queue and if the queue is not cleared
+  // the new callable coming for registration with new timeout
+  // should go to the queue after this new timeout
+  // the callables on the queue were pushed with their respective timeouts
+  // so the last timeout only affects the last callable
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+  it("swap should not happen in safe interval", async () => {});
+  it("swap should not happen in safe interval multiple", async () => {});
+  // not testing it for safe timeout and safe timeout multiple
+});
