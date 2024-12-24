@@ -246,8 +246,7 @@ const CreateMaps = () => {
   // to track callbacks
   const ftcb: FunctionToCallback = new WeakMap();
 
-  const cache = { ftc, ftq, ftl, ftcb } as Cache;
-  return cache;
+  return { ftc, ftq, ftl, ftcb } as Cache;
 };
 /**
  * Function to manage the execution of a given function at specified intervals, ensuring each invocation completes (resolves) before the next one starts.
@@ -316,4 +315,9 @@ export const CreateSafeMultiple = <T extends Callable>(p: Params<T>) => {
   return () => {
     destroy(p.callable, cache, p.removeQueue);
   };
+};
+
+export default {
+  CreateSafe,
+  CreateSafeMultiple,
 };

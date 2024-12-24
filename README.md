@@ -31,7 +31,7 @@ To use directly in the browser:
 Import all methods at once:
 
 ```javascript
-import * as SafeInterval from "safe-interval";
+import * as S from "safe-interval";
 ```
 
 Or pick needed methods:
