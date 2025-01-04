@@ -2275,16 +2275,6 @@ describe("testing remove queue feature, if the queue is due to be removed then t
   // reregistering for multiples is not a thing at all so no other tests here
 });
 
-describe("testing awaitCallback feature", () => {
-  it("if awaitCallback is set to true then the next callable should be pushed to the stack only after the cb has been resolved (safe interval)", async () => {});
-  it("if awaitCallback is set to true then the next callable should be pushed to the stack only after the cb has been resolved (safe interval multiple)", async () => {});
-  it("if awaitCallback is set to false or is undefined then the next callable should be pushed to the stack immediately after the cb for the previous one was called (safe interval)", async () => {});
-  it("if awaitCallback is set to false or is undefined then the next callable should be pushed to the stack immediately after the cb for the previous one was called (safe interval multiple)", async () => {});
-  // not applicable for safe timeout and safe timeout multiple
-  // since the callable is only called once with these methods
-  // and in general it doesn't matter if we wait for the cb or not
-});
-
 describe("testing arguments swap for callables in the queue if the queue is not cleared", () => {
   // if there are callables in the queue and if the queue is not cleared
   // the next registered callable should not affect previously pushed callables
@@ -2320,7 +2310,7 @@ describe("testing arguments swap for callables in the queue if the queue is not 
     expect(ResolveInMSMock).toHaveBeenNthCalledWith(15, 20000);
     expect(ResolveInMSMock).toHaveBeenNthCalledWith(20, 20000);
   });
-  it("swap should not happen in safe interval multiple", async () => {});
+  // not testing it for safe interval multiple since the intervals are not the same
   // not testing it for safe timeout and safe timeout multiple
   // since the callable either is not set to the queue (if cleared before the timeout) or
   // synchronously added to the stack immediately after being pushed to the queue
