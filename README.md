@@ -115,6 +115,22 @@ the form of an object with these fields:
 
 ## Special behaviors explanation
 
+### Loop and Queue
+
+Suppose we have some function which we want to call every some time (interval).
+
+Standard interval would call such function immediately after the timeout which means
+there is neither nice way to cancel the call nor there is a way to ensure an async
+operation finishes before the next call is made and the results come back (which may
+lead to overlapping of the calls/results).
+
+The safe interval and timeout are using the special loop which is based on the queue.
+After the timeout the function which we want to call is registered in the queue and
+the loop starts which in turn picks the registered functions in the order of the queue,
+calls the function, waits for it to finish, calls its callback if any and then picks up the
+next registered function if any. With the queue and the loop we can cancel not needed
+calls, manage the order of calls/results etc.
+
 ### ReRegistering the function
 
 **Is applied only with CreateSafe method.** If a function is
