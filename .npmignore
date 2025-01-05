@@ -1,8 +1,6 @@
 # ignore all
 **/*
 # override above and include needed files
-!dist
+!dist/**/*
 !LICENSE
-!package.json
-!package-lock.json
 !README.md
