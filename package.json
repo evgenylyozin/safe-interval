@@ -4,6 +4,10 @@
   "description": "",
   "main": "dist/index.js",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evgenylyozin/safe-interval.git"
+  },
   "scripts": {
     "build": "vite build",
     "test": "vitest run",
