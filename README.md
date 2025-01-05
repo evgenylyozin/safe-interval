@@ -14,16 +14,8 @@ fear of registering an interval for the same operation multiple times. See the
 
 ## Installation
 
-To use with node:
-
 ```bash
 npm install safe-interval
-```
-
-To use directly in the browser:
-
-```html
-<script src="path/to/yourCopyOf/safe-interval.js"></script>
 ```
 
 ## Usage

@@ -1,15 +1,20 @@
 import { Cache } from "./index.js";
 
 export const CheckTestENV = () => {
-  if (
-    !process ||
-    !process.env ||
-    !process.env.TEST_ENVIRONMENT ||
-    process.env.TEST_ENVIRONMENT !== "enabled"
-  ) {
+  try {
+    if (
+      !process ||
+      !process.env ||
+      !process.env.TEST_ENVIRONMENT ||
+      process.env.TEST_ENVIRONMENT !== "enabled"
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    // Reference error in browser context (ReferenceError: process is not defined)
     return false;
   }
-  return true;
 };
 
 export const SpyOnCache = (cache: Cache, createSafeCache = false) => {
