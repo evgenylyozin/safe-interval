@@ -39,6 +39,10 @@ Before commit is done, the precommit hook should run which is managed by husky
 to staged if any, checks types, lints, tests, builds. If all is good => the commit
 happens.
 
+It works if the prepare script was called on npm install (which should be done automatically).
+If it was called it runs the husky init script which among other things changes the
+source for github hooks to be in the .husky folder.
+
 ## Publishing to NPM
 
 To publish new version of the package to npm there is a CI/CD script in the .github/workflows
