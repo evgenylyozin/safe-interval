@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "Create intervals with predictable async operations start/resolve order and without fear of registering an interval for the same operation multiple times.",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/evgenylyozin/safe-interval.git"
+    "url": "git+https://github.com/evgenylyozin/safe-interval.git"
   },
   "scripts": {
     "build": "vite build",
@@ -21,7 +22,6 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
-  "types": "dist/index.d.ts",
   "devDependencies": {
     "@eslint/js": "^9.13.0",
     "@types/eslint__js": "^8.42.3",
