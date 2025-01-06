@@ -11,13 +11,15 @@
   },
   "scripts": {
     "build": "vite build",
-    "test": "./tests/generate-testable-src.sh && vitest run",
+    "test": "vitest run",
+    "test-with-generate": "npm run generate-testable-src && vitest run",
     "lint": "eslint ./src",
     "prettify": "prettier . --write",
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
     "stage-updated": "git add -u",
-    "prepare-release": "npm run typecheck && npm run lint && npm run test && npm run build"
+    "prepare-release": "npm run generate-testable-src && npm run typecheck && npm run lint && npm run test && npm run build",
+    "generate-testable-src": "./tests/generate-testable-src.sh"
   },
   "keywords": [],
   "author": "",

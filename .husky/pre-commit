@@ -1,5 +1,6 @@
 npm run prettify
 npm run stage-updated
+npm run generate-testable-src
 npm run typecheck
 npm run lint
 npm run test
