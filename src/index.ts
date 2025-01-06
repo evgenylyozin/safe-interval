@@ -1,4 +1,4 @@
-import { SpyOnCache } from "./test.helpers.js";
+//--TestsRelated--import { SpyOnCache } from "../test.helpers.js";
 
 // the function which is registered to be called after the timeout or periodically
 type Callable = (...args: unknown[]) => unknown;
@@ -270,9 +270,7 @@ const CreateMaps = () => {
  */
 export const CreateSafe = (() => {
   const cache = CreateMaps();
-  // cache spy for testing purposes
-  // in production does nothing
-  SpyOnCache(cache, true);
+  //--TestsRelated--SpyOnCache(cache, true);
   /**
    * Main function to create and manage safe intervals or timeouts for a given function.
    * @param callable Function to be called at each interval or timeout.
@@ -307,9 +305,7 @@ export const CreateSafe = (() => {
  */
 export const CreateSafeMultiple = <T extends Callable>(p: Params<T>) => {
   const cache = CreateMaps();
-  // cache spy for testing purposes
-  // in production does nothing
-  SpyOnCache(cache);
+  //--TestsRelated--SpyOnCache(cache);
   Register(p, cache);
   // return the function to destroy the interval
   return () => {

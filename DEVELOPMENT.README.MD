@@ -26,6 +26,18 @@ npm i
 npm run test
 ```
 
+The tests are using additional data like internal caches information, this data
+is not available in the production version of the package and is supplied by the
+following means:
+
+- in the source code there are some places where "//--TestsRelated--" tag is added
+  this is needed to add the tests related functionality but is discarded in the build
+  process as it is just a comment
+- before the tests run the special script copies the src folder to the tests folder
+  and then uncomments the test related parts which become the part of the testable code
+- the tests then import and test generated src files (./tests/src) and use additional
+  functionality present in the test.helpers.ts file
+
 ## To check types, lint, build dist files
 
 ```bash

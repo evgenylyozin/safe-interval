@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "vite build",
-    "test": "vitest run",
+    "test": "./tests/generate-testable-src.sh && vitest run",
     "lint": "eslint ./src",
     "prettify": "prettier . --write",
     "typecheck": "tsc --noEmit",
