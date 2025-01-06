@@ -5,3 +5,5 @@
 !LICENSE
 !README.md
 !package.json
+# exclude js.map file
+dist/index.js.map

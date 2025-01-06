@@ -62,3 +62,8 @@ folder. It is triggered only if a new release is created on the github platform.
 It once again checks types, lints, tests and builds. The built files in the dist folder + a
 couple other files end up being uploaded to npm. The .npmignore file is there to pick
 the files due to be uploaded.
+
+### To successfully update the npm version don't forget
+
+- To update the version in the package.json and then
+- To make the new release with this version as a tag on the github platform

@@ -11,7 +11,9 @@ type FunctionToQueue = WeakMap<Callable, (() => Promise<unknown>)[]>;
 // a map of callable to resolve loop status
 type FunctionToLoop = WeakMap<Callable, boolean>;
 
-// a possible callback to work with the result of a callable invocation
+/**
+ * a possible callback to work with the result of a callable invocation
+ */
 type Callback<T extends Callable> = (
   callableReturn: Awaited<ReturnType<T>>,
 ) => unknown;
@@ -25,7 +27,10 @@ export type Cache = {
   ftq: FunctionToQueue;
   ftl: FunctionToLoop;
 };
-// type for the create safe parameters
+
+/**
+ * type for the create safe parameters
+ */
 type Params<T extends Callable> = {
   callable: T;
   callableArgs: Parameters<T>;
@@ -249,9 +254,21 @@ const CreateMaps = () => {
   return { ftc, ftq, ftl, ftcb } as Cache;
 };
 /**
- * Function to manage the execution of a given function at specified intervals, ensuring each invocation completes (resolves) before the next one starts.
- * @returns A function that, when called, stops the interval or timeout from executing further.
- * Main points of the safe interval or timeout are:
+ * ## Main function to create and manage safe intervals or timeouts for a given function
+ * @param p Parameters for the function
+ * @param p.callable Callable Function to be called at each interval or timeout
+ * @param p.timeout Interval/timeout duration in milliseconds
+ * @param p.callableArgs Arguments for the function
+ * @param p.isInterval If true, an interval is created
+ * @param p.cb Optional callback function to be called with the result of the callable function
+ * @param p.removeQueue If true, the queue of the callable is removed
+ * @returns A function that, when called, stops the interval from executing further
+ *
+ * ### Remarks
+ *
+ * #### Function to manage the execution of a given function at specified intervals, ensuring each invocation completes (resolves) before the next one starts.
+ *
+ * #### Main points of the safe interval or timeout are:
  * - no shuffling of the callable invocations and resolved results (like if an async function was not finished yet but the next one is already called and finished before the first one)
  * - only one interval or timeout for the same callable
  * - special clear function (if the interval or timeout is cleared before any async operation is called then no call will be made,
@@ -263,6 +280,7 @@ const CreateMaps = () => {
  * - ability to reregister the callback function (then all unresolved calls from the queue will use the last registered callback for their results)
  * - ability to reregister the callable arguments and timeout which leads to resolving with the new arguments and after the new timeout if the callable wasn't pushed to the queue already
  * - ability to remove previous queue for the callable with reregister
+ *
  * Can accept a callback function which is expecting the result of the callable as its argument
  * if the callback is provided then it is going to be called after the callable resolves
  * in case of the interval => the callback is called many times
@@ -272,14 +290,15 @@ export const CreateSafe = (() => {
   const cache = CreateMaps();
   //--TestsRelated--SpyOnCache(cache, true);
   /**
-   * Main function to create and manage safe intervals or timeouts for a given function.
-   * @param callable Function to be called at each interval or timeout.
-   * @param timeout Interval/timeout duration in milliseconds.
-   * @param callableArgs Arguments for the function.
-   * @param isInterval If true, an interval is created.
-   * @param cb Optional callback function to be called with the result of the callable function.
-   * @param removeQueue If true, the queue of the callable is removed.
-   * @returns A function that, when called, stops the interval from executing further.
+   * ## Main function to create and manage safe intervals or timeouts for a given function
+   * @param p Parameters for the function
+   * @param p.callable Callable Function to be called at each interval or timeout
+   * @param p.timeout Interval/timeout duration in milliseconds
+   * @param p.callableArgs Arguments for the function
+   * @param p.isInterval If true, an interval is created
+   * @param p.cb Optional callback function to be called with the result of the callable function
+   * @param p.removeQueue If true, the queue of the callable is removed
+   * @returns A function that, when called, stops the interval from executing further
    */
   return <T extends Callable>(p: Params<T>): (() => void) => {
     Register(p, cache);
@@ -291,14 +310,29 @@ export const CreateSafe = (() => {
 })();
 
 /**
- * Use this function if there is a need to setup multiple intervals/timeouts for the same callable.
+ * ## Function to create and manage multiple safe intervals or timeouts for a given function.
+ * @param p Parameters for the function
+ * @param p.callable Callable Function to be called at each interval or timeout
+ * @param p.timeout Interval/timeout duration in milliseconds
+ * @param p.callableArgs Arguments for the function
+ * @param p.isInterval If true, an interval is created
+ * @param p.cb Optional callback function to be called with the result of the callable function
+ * @param p.removeQueue If true, the queue of the callable is removed
+ * @returns A function that, when called, stops the interval from executing further
+ *
+ * ### Remarks
+ *
+ * #### Use this function if there is a need to setup multiple intervals/timeouts for the same callable.
+ *
  * For example, if there is a need to fetch multiple different resources periodically, or the same resource but with different timeouts.
  * Every call to the function creates a new interval/timeout for the callable.
- * characteristics which remain from CreateSafe are:
+ *
+ * #### Characteristics which remain from CreateSafe are:
  * - no shuffling of the callable invocations and resolved results (inside the same interval)
  * - special clear function
  * - can accept a callback
- * not like CreateSafe:
+ *
+ * #### Not like CreateSafe:
  * - creates interval/timeout for the same callable each time allowing for not related intervals/timeouts calling the same callable (no matter the arguments, timeout)
  * there is no closure over the cache here so
  * each call creates a new cache and the calls are not related through the cache or by any other means
