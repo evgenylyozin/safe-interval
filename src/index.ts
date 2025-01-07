@@ -1,13 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 //--TestsRelated--import { SpyOnCache } from "../test.helpers.js";
 
 // the function which is registered to be called after the timeout or periodically
-type Callable = (...args: unknown[]) => unknown;
+type Callable = (...args: any[]) => any;
 // the function which is returned after registering a new interval or timeout to remove such interval or timeout
 type Clear = () => void;
 // a map of callable to clear function
 type FunctionToClear = WeakMap<Callable, Clear>;
 // a map of callable to its queue of unresolved async functions (which are essentially the wrappers around the callable)
-type FunctionToQueue = WeakMap<Callable, (() => Promise<unknown>)[]>;
+type FunctionToQueue = WeakMap<
+  Callable,
+  (() => Promise<ReturnType<Callable>>)[]
+>;
 // a map of callable to resolve loop status
 type FunctionToLoop = WeakMap<Callable, boolean>;
 
@@ -16,7 +20,7 @@ type FunctionToLoop = WeakMap<Callable, boolean>;
  */
 type Callback<T extends Callable> = (
   callableReturn: Awaited<ReturnType<T>>,
-) => unknown;
+) => any;
 // a map of callable to its callback
 type FunctionToCallback = WeakMap<Callable, Callback<Callable> | undefined>;
 
