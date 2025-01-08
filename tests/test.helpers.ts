@@ -22,15 +22,15 @@ export const ClearCaches = () => {
   if (SafeCache) {
     // doing it this way to not lose the link to
     // the original cache object
-    SafeCache.ftc = new WeakMap();
-    SafeCache.ftq = new WeakMap();
-    SafeCache.ftl = new WeakMap();
-    SafeCache.ftcb = new WeakMap();
+    SafeCache.ftc = new Map();
+    SafeCache.ftq = new Map();
+    SafeCache.ftl = new Map();
+    SafeCache.ftcb = new Map();
   }
   if (SafeMultipleCache) {
-    SafeMultipleCache.ftc = new WeakMap();
-    SafeMultipleCache.ftq = new WeakMap();
-    SafeMultipleCache.ftl = new WeakMap();
-    SafeMultipleCache.ftcb = new WeakMap();
+    SafeMultipleCache.ftc = new Map();
+    SafeMultipleCache.ftq = new Map();
+    SafeMultipleCache.ftl = new Map();
+    SafeMultipleCache.ftcb = new Map();
   }
 };

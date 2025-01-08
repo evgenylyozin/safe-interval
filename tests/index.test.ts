@@ -1351,95 +1351,97 @@ const DataIdentity2 = (
   a4?: unknown,
   a5?: unknown,
 ) => {
-  return a3 ? a3 : a1 ? a1 : a2 ? a2 : a4 ? a4 : a5;
+  return a3 ? a3 : a3 ? a3 : a1 ? a1 : a2 ? a2 : a4 ? a4 : a5; // this is a little different to make this function be different by value
 };
-
-const DataIdentity2Mock = vi.fn(DataIdentity2);
 
 describe("testing CreateSafe as interval with different functions with single argument", () => {
   for (const args of Arguments) {
     it("two different intervals for different callables", async () => {
       CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity, // not using mocks directly here since the test supposes 2 different functions, mocks return the same funtion by value
         callableArgs: ["1"],
         timeout: 0,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: ["2"],
         timeout: 100000,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: ["3"],
         timeout: 0,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: ["4"],
         timeout: 3,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
       const clear = CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: args,
         timeout: 2000,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
 
       CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: ["1"],
         timeout: 0,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: ["2"],
         timeout: 100000,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: ["3"],
         timeout: 0,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: ["4"],
         timeout: 3,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
       const clear2 = CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: args,
         timeout: 2000,
         isInterval: true,
+        cb: IdentityCallbackMock,
       });
 
-      await vi.advanceTimersToNextTimerAsync();
+      await vi.advanceTimersByTimeAsync(2000);
 
-      expect(DataIdentityMock).toBeCalledTimes(1);
-      expect(DataIdentityMock).toBeCalledWith(...args);
-      expect(DataIdentityMock).toReturnWith(
-        args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
-      );
-
-      expect(DataIdentity2Mock).toBeCalledTimes(1);
-      expect(DataIdentity2Mock).toBeCalledWith(...args);
-      expect(DataIdentity2Mock).toReturnWith(
+      // inspecting the result through the cb
+      // expect the cb to be called 2 times (once for each callable)
+      expect(IdentityCallbackMock).toBeCalledTimes(2);
+      expect(IdentityCallbackMock).toReturnWith(
         args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
       );
       clear();
       clear2();
       await vi.advanceTimersByTimeAsync(10000);
       // expect the intervals to be cleared for both callables
-      expect(DataIdentityMock).toBeCalledTimes(1);
-      expect(DataIdentity2Mock).toBeCalledTimes(1);
+      expect(IdentityCallbackMock).toBeCalledTimes(2);
     });
   }
 });
@@ -1448,89 +1450,90 @@ describe("testing CreateSafe as timeout with different functions with single arg
   for (const args of Arguments) {
     it("two different timeouts for different callables", async () => {
       CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: ["1"],
         timeout: 0,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: ["2"],
         timeout: 100000,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: ["3"],
         timeout: 0,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: ["3"],
         timeout: 4,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
       const clear = CreateSafe({
-        callable: DataIdentityMock,
+        callable: DataIdentity,
         callableArgs: args,
         timeout: 2000,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
 
       CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: ["1"],
         timeout: 0,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: ["2"],
         timeout: 100000,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: ["3"],
         timeout: 0,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
       CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: ["4"],
         timeout: 3,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
       const clear2 = CreateSafe({
-        callable: DataIdentity2Mock,
+        callable: DataIdentity2,
         callableArgs: args,
         timeout: 2000,
         isInterval: false,
+        cb: IdentityCallbackMock,
       });
 
-      await vi.advanceTimersToNextTimerAsync();
-      expect(DataIdentityMock).toBeCalledTimes(1);
-      expect(DataIdentityMock).toBeCalledWith(...args);
-      expect(DataIdentityMock).toReturnWith(
+      await vi.advanceTimersByTimeAsync(2000);
+
+      // inspecting the result through the cb
+      // expect the cb to be called 2 times (once for each callable)
+      expect(IdentityCallbackMock).toBeCalledTimes(2);
+      expect(IdentityCallbackMock).toReturnWith(
         args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
       );
-
-      expect(DataIdentity2Mock).toBeCalledTimes(1);
-      expect(DataIdentity2Mock).toBeCalledWith(...args);
-      expect(DataIdentity2Mock).toReturnWith(
-        args.length > 1 ? args[2] : args.length > 0 ? args[0] : undefined,
-      );
-
-      await vi.advanceTimersByTimeAsync(10000);
-      // expect no more callables to be executed even without the clear call
-      expect(DataIdentityMock).toBeCalledTimes(1);
-      expect(DataIdentity2Mock).toBeCalledTimes(1);
-
-      // expect no errors on expired clear calls
-
       clear();
       clear2();
+      await vi.advanceTimersByTimeAsync(10000);
+      // expect the timeouts to be cleared for both callables
+      expect(IdentityCallbackMock).toBeCalledTimes(2);
     });
   }
 });
@@ -2347,4 +2350,111 @@ describe("testing timeout swap for callables in the queue if the queue is cleare
   });
   // not testing it for safe timeout and safe timeout multiple
   // not testing for multiple interval either since the intervals are independent
+});
+
+describe("testing special function cases to be registered only once", () => {
+  it("anonymous function should be registered only once", async () => {
+    const c1 = CreateSafe({
+      callable: (data: string) => {
+        return data;
+      },
+      callableArgs: ["1"],
+      timeout: 1000,
+      isInterval: true,
+      cb: IdentityCallbackMock,
+    });
+    const c2 = CreateSafe({
+      callable: (data: string) => {
+        return data;
+      },
+      callableArgs: ["2"],
+      timeout: 1000,
+      isInterval: true,
+      cb: IdentityCallbackMock,
+    });
+    const c3 = CreateSafe({
+      callable: (data: string) => {
+        return data;
+      },
+      callableArgs: ["3"],
+      timeout: 1000,
+      isInterval: true,
+      cb: IdentityCallbackMock,
+    });
+    await vi.advanceTimersByTimeAsync(10000);
+    c1();
+    c2();
+    c3();
+    // we expect that the Identity cb is called 10 times with 3 only
+    expect(IdentityCallbackMock).toHaveBeenCalledTimes(10);
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(1, "3");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(2, "3");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(5, "3");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(10, "3");
+  });
+  it("function pointing to other function should be registered only once", async () => {
+    const a = vi.fn((data: string) => {
+      return data;
+    });
+    const b = a;
+    const c1 = CreateSafe({
+      callable: a,
+      callableArgs: ["1"],
+      timeout: 1000,
+      isInterval: true,
+      cb: IdentityCallbackMock,
+    });
+    const c2 = CreateSafe({
+      callable: b,
+      callableArgs: ["2"],
+      timeout: 1000,
+      isInterval: true,
+      cb: IdentityCallbackMock,
+    });
+    await vi.advanceTimersByTimeAsync(10000);
+    c1();
+    c2();
+    // we expect that the Identity cb is called 10 times with 2 only
+    expect(IdentityCallbackMock).toHaveBeenCalledTimes(10);
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(1, "2");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(2, "2");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(5, "2");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(10, "2");
+  });
+  it("functions with different identifier but with the same signature are registered only once", async () => {
+    const a = vi.fn((data: string) => {
+      return data;
+    });
+    const b = vi.fn((data: string) => {
+      return data;
+    });
+    const c1 = CreateSafe({
+      callable: a,
+      callableArgs: ["1"],
+      timeout: 1000,
+      isInterval: true,
+      cb: IdentityCallbackMock,
+    });
+    const c2 = CreateSafe({
+      callable: b,
+      callableArgs: ["2"],
+      timeout: 1000,
+      isInterval: true,
+      cb: IdentityCallbackMock,
+    });
+    await vi.advanceTimersByTimeAsync(10000);
+    c1();
+    c2();
+    // we expect that the Identity cb is called 10 times with 2 only
+    // and that the a is called 10 times and b is called 0 times since
+    // if the registered callable is the same as what already is present
+    // in the cache => the what is present in the cache version is used
+    expect(IdentityCallbackMock).toHaveBeenCalledTimes(10);
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(1, "2");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(2, "2");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(5, "2");
+    expect(IdentityCallbackMock).toHaveBeenNthCalledWith(10, "2");
+    expect(a).toHaveBeenCalledTimes(10);
+    expect(b).toHaveBeenCalledTimes(0);
+  });
 });

@@ -6,14 +6,11 @@ type Callable = (...args: any[]) => any;
 // the function which is returned after registering a new interval or timeout to remove such interval or timeout
 type Clear = () => void;
 // a map of callable to clear function
-type FunctionToClear = WeakMap<Callable, Clear>;
+type FunctionToClear = Map<Callable, Clear>;
 // a map of callable to its queue of unresolved async functions (which are essentially the wrappers around the callable)
-type FunctionToQueue = WeakMap<
-  Callable,
-  (() => Promise<ReturnType<Callable>>)[]
->;
+type FunctionToQueue = Map<Callable, (() => Promise<ReturnType<Callable>>)[]>;
 // a map of callable to resolve loop status
-type FunctionToLoop = WeakMap<Callable, boolean>;
+type FunctionToLoop = Map<Callable, boolean>;
 
 /**
  * a possible callback to work with the result of a callable invocation
@@ -22,7 +19,7 @@ type Callback<T extends Callable> = (
   callableReturn: Awaited<ReturnType<T>>,
 ) => any;
 // a map of callable to its callback
-type FunctionToCallback = WeakMap<Callable, Callback<Callable> | undefined>;
+type FunctionToCallback = Map<Callable, Callback<Callable> | undefined>;
 
 // type of the cache of all maps
 export type Cache = {
@@ -54,7 +51,6 @@ type Params<T extends Callable> = {
  * if any memory related issues arise in the future, it might be
  * viable to create the means to track full callable completion and no reregistration
  * and then removing all the callable keys from all the maps
- * For now WeakMap is used which can potentially alleviate memory issues
  */
 const destroy = (
   callable: Callable,
@@ -217,6 +213,32 @@ const Start = <T extends Callable>(
 };
 
 /**
+ * In cases where the passed in callable is anonymous
+ * we can't just put it to the cache because
+ * there could be the same callable (by value) already
+ * which would lead to registering identical function multiple times
+ * We go over all available callables here and if there is already the same callable
+ * we return it or the originally registered callable is returned
+ * @param c - The callable which is registered
+ * @param ftc - The map of callables to their clear functions already available in the cache
+ * @returns
+ */
+const FindSame = (c: Callable, ftc: FunctionToClear) => {
+  if (ftc.has(c)) {
+    // Found same by address
+    return c;
+  }
+  for (const [key] of ftc) {
+    if (key.toString() === c.toString()) {
+      // Found same by value
+      return key;
+    }
+  }
+  // Found new
+  return c;
+};
+
+/**
  * Register function that sets up a safe interval or timeout for the given callable function.
  * When invoked, destroys the previous interval or timeout and starts a new one for the provided callable.
  * @param callable Function to be executed at each interval.
@@ -228,7 +250,8 @@ const Start = <T extends Callable>(
  * @param removeQueue If true, the queue of the callable is removed.
  */
 const Register = <T extends Callable>(p: Params<T>, cache: Cache): void => {
-  const { ftq, ftl, ftcb } = cache;
+  const { ftc, ftq, ftl, ftcb } = cache;
+  p.callable = FindSame(p.callable, ftc) as T;
   destroy(p.callable, cache, p.removeQueue);
   setCallback(p.callable, p.cb, ftcb);
   setQueue(p.callable, ftq);
@@ -247,16 +270,17 @@ const Register = <T extends Callable>(p: Params<T>, cache: Cache): void => {
  */
 const CreateMaps = () => {
   // to track all functions that are called in the safe interval
-  const ftc: FunctionToClear = new WeakMap();
+  const ftc: FunctionToClear = new Map();
   // resolve queue
-  const ftq: FunctionToQueue = new WeakMap();
+  const ftq: FunctionToQueue = new Map();
   // track loop status
-  const ftl: FunctionToLoop = new WeakMap();
+  const ftl: FunctionToLoop = new Map();
   // to track callbacks
-  const ftcb: FunctionToCallback = new WeakMap();
+  const ftcb: FunctionToCallback = new Map();
 
   return { ftc, ftq, ftl, ftcb } as Cache;
 };
+
 /**
  * ## Main function to create and manage safe intervals or timeouts for a given function
  * @param p Parameters for the function

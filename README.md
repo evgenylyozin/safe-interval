@@ -130,7 +130,75 @@ registered with CreateSafe and then the same function is registered again (even 
 managing such function and the arguments/timeout will be the last ones passed to
 the CreateSafe method from now on. See [ReRegistering demo](#reregistering).
 
-Nuances:
+**Notice:**
+The callable is compared by reference and by value. This means that some functions
+passed to the CreateSafe are going to be treated as the same function and
+the first copy of the function will be used (though with the new arguments/timeout if passed)
+like in the cases below:
+
+- the same anonymous function (identical signature and body):
+
+```javascript
+CreateSafe({
+  callable: (data) => data,
+  callableArgs: ["1"],
+  timeout: 1000,
+  isInterval: true,
+});
+CreateSafe({
+  callable: (data) => data,
+  callableArgs: ["2"],
+  timeout: 1000,
+  isInterval: true,
+});
+// the first callable copy will be used but with the ["2"] as args
+```
+
+- different identifiers pointing to the same function:
+
+```javascript
+const a = (data) => data;
+const b = a;
+CreateSafe({
+  callable: a,
+  callableArgs: ["1"],
+  timeout: 1000,
+  isInterval: true,
+});
+CreateSafe({
+  callable: b,
+  callableArgs: ["2"],
+  timeout: 1000,
+  isInterval: true,
+});
+// "a" will be used with the ["2"] as args
+```
+
+- different identifiers containing identical function signature and body:
+
+```javascript
+const a = (data) => data;
+const b = (data) => data;
+CreateSafe({
+  callable: a,
+  callableArgs: ["1"],
+  timeout: 1000,
+  isInterval: true,
+});
+CreateSafe({
+  callable: b,
+  callableArgs: ["2"],
+  timeout: 1000,
+  isInterval: true,
+});
+// "a" will be used with the ["2"] as args
+```
+
+_**It also means that if any wrapper function creates and returns another function
+calling the original => such wrappers would be treated like the same by value
+because they produce the same output for different wrapped functions.**_
+
+_**Nuances:**_
 
 - If the previous interval has added some functions to the queue already
   (with the arguments which were passed on such interval creation).
