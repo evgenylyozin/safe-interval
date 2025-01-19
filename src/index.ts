@@ -124,9 +124,10 @@ const setCallback = <T extends Callable>(
  */
 const StartResolveLoopIfNeeded = (callable: Callable, cache: Cache) => {
   const { ftl, ftq, ftcb } = cache;
+  setLoop(callable, ftl); // if the key in ftl was removed by the previous loop, add it again
   // start the new loop only if the callable is registered in the FunctionToLoop map
   // and it is not already started
-  if (ftl.has(callable) && !ftl.get(callable)) {
+  if (!ftl.get(callable)) {
     // set the resolve loop status
     ftl.set(callable, true);
 
@@ -151,11 +152,12 @@ const StartResolveLoopIfNeeded = (callable: Callable, cache: Cache) => {
         }
       } else {
         // here we know that the queue is empty
-        // so we set the loop to not active state
-        // specifically not removing ftl or ftq key here so that
-        // an interval if any sees where to put new
-        // wrapped callable (or else it will not push to the queue)
-        ftl.set(callable, false);
+        // so remove the resolve loop status
+        // and the queue
+        // and the callback
+        ftl.delete(callable);
+        ftq.delete(callable);
+        ftcb.delete(callable);
       }
     })();
   }
@@ -176,7 +178,8 @@ const Start = <T extends Callable>(
   interval: boolean | undefined,
   cache: Cache,
 ) => {
-  const { ftc, ftq } = cache;
+  const { ftc, ftq, ftcb } = cache;
+  const OriginalCB = ftcb.get(callable); // to not lose registered original cb get reference here
   // the timeout callback is made async
   // on purpose so that if the calling code
   // is clearing the timeout or interval with the withQueue flag
@@ -188,20 +191,17 @@ const Start = <T extends Callable>(
   // with the async here the synchronous operations end on the register then if the clear was called it would empty the queue
   // before anything from the queue is set to be executed
   const TimeoutCallback = () => {
-    // push the function into the queue
-    // if the callable is scheduled after the timeout passes (not cancelled)
-    // the FunctionToQueue map should already have the callable as the registered key
-    if (ftq.has(callable)) {
-      // push the callable wrapped in an async function
-      // to then call and resolve it in the order of the queue
-      // the actual call is made by the resolve loop
-      ftq.get(callable)!.push(async () => {
-        return await callable(...callableArgs);
-      });
-      // after the push try to initiate the new loop
-      // if not already started
-      StartResolveLoopIfNeeded(callable, cache);
-    }
+    setQueue(callable, ftq); // if the queue was removed by previous resolve loop then recreate it
+    setCallback(callable, OriginalCB, ftcb); // if the cb was removed by previous resolve loop then recreate it
+    // push the callable wrapped in an async function
+    // to then call and resolve it in the order of the queue
+    // the actual call is made by the resolve loop
+    ftq.get(callable)!.push(async () => {
+      return await callable(...callableArgs);
+    });
+    // after the push try to initiate the new loop
+    // if not already started
+    StartResolveLoopIfNeeded(callable, cache);
   };
   const TimeoutID = interval
     ? setInterval(TimeoutCallback, timeout)
@@ -234,7 +234,7 @@ const FindSame = (c: Callable, ftc: FunctionToClear) => {
       return key;
     }
   }
-  // Found new
+  // c is new
   return c;
 };
 

@@ -34,3 +34,7 @@ export const ClearCaches = () => {
     SafeMultipleCache.ftcb = new Map();
   }
 };
+
+export const CountCacheKeys = (cache: Cache) => {
+  return cache.ftc.size + cache.ftq.size + cache.ftl.size + cache.ftcb.size;
+};

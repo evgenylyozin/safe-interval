@@ -22,8 +22,10 @@ npm i
 
 ## To run tests
 
+Make changes in src/index.ts and then run:
+
 ```bash
-npm run test
+npm run test-with-generate
 ```
 
 The tests are using additional data like internal caches information, this data
