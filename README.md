@@ -275,6 +275,50 @@ CreateSafeMultiple => the callback function could be used instead:
 
 [![Callback](./demo/callback.gif)](https://github.com/user-attachments/assets/ea184919-7699-4ebd-9821-796cd6f3405e)
 
+Moreover it is possible to call the callback which has no arguments at all (as some procedure after the callable has resolved) or even the callback which works with arguments of different type than the callable returns:
+
+```typescript
+const NumberReturn = () => {
+  return 1;
+};
+const CallbackWithNoArgs = () => {
+  console.log("hello");
+};
+const CallbackWorkingWithString = (data: string) => {
+  return data;
+};
+// this interval registers the callable
+// which returns a number
+// but the Callback expects no arguments
+// still it works, the return is just ignored
+CreateSafe({
+  callable: NumberReturnMock,
+  callableArgs: [],
+  timeout: 1000,
+  isInterval: true,
+  cb: CallbackWithNoArgs,
+  removeQueue: false,
+});
+// this interval registers the callable
+// which returns a number
+// but the Callback expects a string as the argument
+CreateSafe({
+  callable: NumberReturnMock,
+  callableArgs: [],
+  timeout: 1000,
+  isInterval: true,
+  // in such case work in this way
+  // the data (arguments) for such callback should come not from the return of the callable
+  // but from somewhere else (like external data source)
+  // then after the callable resolves it passes data to the cb
+  // but it is ignored since the cb is wrapped in a function which
+  // doesn't expect any data
+  // instead it internally works with the data passed in advance
+  cb: () => CallbackWorkingWithString("hello"),
+  removeQueue: false,
+});
+```
+
 ### Option to clear the queue of async calls
 
 CreateSafe and CreateSafeMultiple manage special queue for any registered function where standard setInterval will push directly to the stack. Which leads to an option to clear the queue of async calls in the first case and resolving all registered calls in the last one no matter the clear was called:

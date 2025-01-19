@@ -2558,3 +2558,48 @@ describe("testing cache empty state after all operations are done", () => {
     expect(CountCacheKeys(SafeMultipleCache)).toBe(0);
   });
 });
+
+const NumberReturnMock = vi.fn(() => {
+  return 1;
+});
+const CallbackWithNoArgs = vi.fn(() => {});
+const CallbackWorkingWithString = vi.fn((data: string) => {
+  return data;
+});
+describe("testing ability to call the cb with no arguments or different arguments than the callable returns", () => {
+  it("it is possible to pass the callback without any arguments which should run after the callable even if the callable returns something", async () => {
+    const c1 = CreateSafe({
+      callable: NumberReturnMock,
+      callableArgs: [],
+      timeout: 1000,
+      isInterval: true,
+      cb: CallbackWithNoArgs,
+      removeQueue: false,
+    });
+    await vi.advanceTimersByTimeAsync(10000);
+    c1();
+    expect(CallbackWithNoArgs).toHaveBeenCalledTimes(10);
+  });
+  it("it is possible work with the cb with different args than the return of the callable", async () => {
+    const c1 = CreateSafe({
+      callable: NumberReturnMock,
+      callableArgs: [],
+      timeout: 1000,
+      isInterval: true,
+      // in such case work in this way
+      // the data (arguments) for such callback should come not from the return of the callable
+      // but from somewhere else (like external data source)
+      // then after the callable resolves it passes data to the cb
+      // but it is ignored since the cb doesn't expect any data
+      // instead it internally works with the data passed in advance
+      cb: () => CallbackWorkingWithString("hello"),
+      removeQueue: false,
+    });
+    await vi.advanceTimersByTimeAsync(10000);
+    c1();
+    expect(CallbackWorkingWithString).toHaveBeenCalledTimes(10);
+    expect(CallbackWorkingWithString).toHaveReturnedTimes(10);
+    expect(CallbackWorkingWithString).toHaveReturnedWith("hello");
+    expect(CallbackWorkingWithString).toHaveBeenCalledWith("hello");
+  });
+});
