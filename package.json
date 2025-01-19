@@ -21,8 +21,13 @@
     "prepare-release": "npm run generate-testable-src && npm run typecheck && npm run lint && npm run test && npm run build",
     "generate-testable-src": "./tests/generate-testable-src.sh"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "interval",
+    "timeout",
+    "javascript",
+    "typescript"
+  ],
+  "author": "Evgenii Evgenevich Lezin (https://github.com/evgenylyozin)",
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^9.13.0",
