@@ -292,7 +292,7 @@ const CallbackWorkingWithString = (data: string) => {
 // but the Callback expects no arguments
 // still it works, the return is just ignored
 CreateSafe({
-  callable: NumberReturnMock,
+  callable: NumberReturn,
   callableArgs: [],
   timeout: 1000,
   isInterval: true,
@@ -303,7 +303,7 @@ CreateSafe({
 // which returns a number
 // but the Callback expects a string as the argument
 CreateSafe({
-  callable: NumberReturnMock,
+  callable: NumberReturn,
   callableArgs: [],
   timeout: 1000,
   isInterval: true,
